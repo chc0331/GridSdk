@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.android.gridsdk"
+    namespace = "com.android.gridsdk.sample"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.android.gridsdk"
+        applicationId = "com.android.gridsdk.sample"
         minSdk = 34
         targetSdk = 36
         versionCode = 1

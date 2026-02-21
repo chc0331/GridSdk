@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "GridSdk"
-include(":app")
 include(":grid-sdk")
+include(":sample-app")

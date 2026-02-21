@@ -1,4 +1,4 @@
-package com.android.gridsdk.ui.theme
+package com.android.gridsdk.sample.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

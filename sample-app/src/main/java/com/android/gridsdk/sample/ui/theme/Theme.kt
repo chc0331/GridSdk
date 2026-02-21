@@ -1,4 +1,4 @@
-package com.android.gridsdk.ui.theme
+package com.android.gridsdk.sample.ui.theme
 
 import android.app.Activity
 import android.os.Build
