@@ -37,6 +37,16 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 dependencies {
@@ -50,6 +60,10 @@ dependencies {
     implementation(libs.androidx.compose.animation)
     
     testImplementation(libs.junit)
+    testImplementation(libs.junit.vintage.engine)
+    testImplementation(libs.kotest.property.jvm)
+    testImplementation(libs.kotest.runner.junit5.jvm)
+    testImplementation(libs.kotlinx.coroutines.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

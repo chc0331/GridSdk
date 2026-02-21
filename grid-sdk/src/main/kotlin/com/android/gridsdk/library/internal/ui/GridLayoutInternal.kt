@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import com.android.gridsdk.library.internal.ui.DragGestureHandler.dragGesture
 import com.android.gridsdk.library.internal.ui.ResizeGestureHandler.resizeGesture
 import androidx.compose.ui.unit.IntOffset
@@ -128,6 +129,7 @@ internal object GridLayoutInternal {
                     Modifier.minimumInteractiveComponentSize()
                         .semantics(mergeDescendants = true) {
                             contentDescription = "Grid item at (${item.x}, ${item.y}), size ${item.spanX}x${item.spanY}"
+                            testTag = "grid-item-${item.id}"
                         }
                 ),
             content = { cellContent(item) }
