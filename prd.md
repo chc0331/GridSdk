@@ -82,14 +82,14 @@
 # 개발 단계 체크리스트
 
 ## 1) 프로젝트/모듈 구조 (SDK 우선)
-- [ ] `:grid-sdk` 라이브러리 모듈 생성 (`com.android.library`)
-- [ ] `:sample-app` 모듈 생성 (`com.android.application`)
-- [ ] `:sample-app`이 `:grid-sdk`만 의존하도록 설정
-- [ ] 라이브러리 `namespace`, `consumer-rules.pro` 기본 설정
-- [ ] 퍼블릭 API 패키지와 internal 패키지 분리 규칙 정의
-- [ ] 빌드 변형(debug/release)에서 SDK 단독 빌드 확인
-- [ ] 로컬 배포를 위한 `maven-publish` 초안 설정
-- [ ] 샘플 앱에서 로컬 아티팩트 의존성 연결 검증
+- [x] `:grid-sdk` 라이브러리 모듈 생성 (`com.android.library`)
+- [x] `:sample-app` 모듈 생성 (`com.android.application`)
+- [x] `:sample-app`이 `:grid-sdk`만 의존하도록 설정
+- [x] 라이브러리 `namespace`, `consumer-rules.pro` 기본 설정
+- [x] 퍼블릭 API 패키지와 internal 패키지 분리 규칙 정의
+- [x] 빌드 변형(debug/release)에서 SDK 단독 빌드 확인
+- [x] 로컬 배포를 위한 `maven-publish` 초안 설정
+- [x] 샘플 앱에서 로컬 아티팩트 의존성 연결 검증
 
 ## 2) 도메인 모델/계약 정의
 - [ ] `GridSize(N,M)` 모델 정의 (N/M 유효성 검사 포함)
