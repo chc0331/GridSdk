@@ -54,6 +54,20 @@ public object GridEngine {
         val targetItem = request.items.find { it.id == request.itemId }
             ?: return EngineResult.failure(GridError.ItemNotFound(request.itemId))
         val movedItem = targetItem.moveTo(request.targetX, request.targetY)
+        if (!movedItem.isValidIn(request.gridSize)) {
+            return EngineResult.failure(
+                GridError.OutOfBounds(
+                    itemId = request.itemId,
+                    position = GridError.Position(
+                        request.targetX,
+                        request.targetY,
+                        movedItem.spanX,
+                        movedItem.spanY
+                    ),
+                    gridSize = request.gridSize
+                )
+            )
+        }
         val candidate = PlacementExplorer.exploreBestCandidate(
             request.items,
             movedItem,

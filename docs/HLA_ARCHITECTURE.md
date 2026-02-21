@@ -209,5 +209,6 @@ GridSdk/
 
 - ~~**Add 로직**~~: **완료** (4단계) - `PlacementExplorer.findFirstEmptyPosition`, `exploreAddPosition` 구현, `GridEngine.process(Add)` 지원
 - ~~**Engine Facade**~~: **완료** (4단계) - `GridEngine.process(request)` 공개 진입점 구현
+- ~~**Move 로직**~~: **완료** (5단계) - `GridEngine.processMove` 경계 검증(OutOfBounds), `exploreBestCandidate` 충돌 재배치, `GridEngineMoveTest` 단위 테스트
 - **롤백 규칙**: 드래그 중 원위치 복귀 로직 미구현 (7단계)
 - **Compose 통합**: 공개 Composable, 제스처 핸들러, 애니메이션 브리지 미구현 (8단계)

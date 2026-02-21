@@ -158,4 +158,20 @@ class PlacementExplorerTest {
 
         assertNull(result)
     }
+
+    @Test
+    fun `exploreBestCandidate tie-break prefers top-left when distance ties`() {
+        val items = listOf(
+            GridItem("a", 0, 0, 1, 1),
+            GridItem("b", 1, 1, 1, 1)
+        )
+        val target = GridItem("a", 1, 1, 1, 1)
+
+        val result = PlacementExplorer.exploreBestCandidate(items, target, gridSize)
+
+        assertNotNull(result)
+        val relocatedB = result!!.find { it.id == "b" }!!
+        assertEquals(1, relocatedB.x)
+        assertEquals(0, relocatedB.y)
+    }
 }
