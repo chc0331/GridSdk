@@ -92,14 +92,14 @@
 - [x] 샘플 앱에서 로컬 아티팩트 의존성 연결 검증
 
 ## 2) 도메인 모델/계약 정의
-- [ ] `GridSize(N,M)` 모델 정의 (N/M 유효성 검사 포함)
-- [ ] `GridItem(id,x,y,spanX,spanY)` 모델 정의
-- [ ] 좌표/Span 경계 유효성 검사 유틸 정의
-- [ ] 셀 점유 상태(`Occupancy`) 자료구조 설계
-- [ ] 실패 결과 에러 타입(`OutOfBounds`, `NoFeasibleLayout` 등) 정의
-- [ ] 엔진 입출력 DTO(`MoveRequest`, `ResizeRequest`, `AddRequest`) 정의
-- [ ] 엔진 결과 DTO(`Success`, `Failure`, `RelocatedItems`) 정의
-- [ ] 불변조건 문서화(중복 점유 금지, 경계 초과 금지)
+- [x] `GridSize(N,M)` 모델 정의 (N/M 유효성 검사 포함)
+- [x] `GridItem(id,x,y,spanX,spanY)` 모델 정의
+- [x] 좌표/Span 경계 유효성 검사 유틸 정의
+- [x] 셀 점유 상태(`Occupancy`) 자료구조 설계
+- [x] 실패 결과 에러 타입(`OutOfBounds`, `NoFeasibleLayout` 등) 정의
+- [x] 엔진 입출력 DTO(`MoveRequest`, `ResizeRequest`, `AddRequest`) 정의
+- [x] 엔진 결과 DTO(`Success`, `Failure`, `RelocatedItems`) 정의
+- [x] 불변조건 문서화(중복 점유 금지, 경계 초과 금지)
 
 ## 3) 배치 엔진 코어
 - [ ] 아이템 배치 가능 여부 판정 함수 구현
