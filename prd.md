@@ -148,14 +148,14 @@
 - [ ] 복귀 시 애니메이션 자연스러움 확인용 UI 테스트 작성
 
 ## 8) Compose UI/인터랙션 통합
-- [ ] SDK 공개 Composable 컨테이너 정의
-- [ ] 아이템 content slot API 정의
-- [ ] drag 제스처 처리기 연결
-- [ ] long press + drag resize 제스처 처리기 연결
-- [ ] 엔진 결과를 UI state로 반영하는 브리지 구현
-- [ ] 재배치된 아이템 애니메이션 적용(`animate*` 계열)
-- [ ] 프레임 드랍 관찰 지표(로그/trace) 추가
-- [ ] 기본 접근성(터치 영역/상태 설명) 점검
+- [x] SDK 공개 Composable 컨테이너 정의
+- [x] 아이템 content slot API 정의
+- [x] drag 제스처 처리기 연결
+- [x] long press + drag resize 제스처 처리기 연결
+- [x] 엔진 결과를 UI state로 반영하는 브리지 구현
+- [x] 재배치된 아이템 애니메이션 적용(`animate*` 계열)
+- [x] 프레임 드랍 관찰 지표(로그/trace) 추가
+- [x] 기본 접근성(터치 영역/상태 설명) 점검
 
 ## 9) 공개 API 안정화 (SDK 관점)
 - [ ] 외부 공개 타입 목록 확정 (`public` 최소화)

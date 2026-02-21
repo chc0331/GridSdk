@@ -1,5 +1,6 @@
 package com.android.gridsdk.library.model.engine
 
+import android.os.Trace
 import com.android.gridsdk.library.model.GridError
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
@@ -21,10 +22,16 @@ public object GridEngine {
      * @return 성공 시 [EngineResult.Success], 실패 시 [EngineResult.Failure]
      */
     public fun process(request: EngineRequest): EngineResult {
-        return when (request) {
-            is EngineRequest.Add -> processAdd(request)
-            is EngineRequest.Move -> processMove(request)
-            is EngineRequest.Resize -> processResize(request)
+        val sectionName = "GridEngine.process(${request::class.simpleName})"
+        Trace.beginSection(sectionName)
+        return try {
+            when (request) {
+                is EngineRequest.Add -> processAdd(request)
+                is EngineRequest.Move -> processMove(request)
+                is EngineRequest.Resize -> processResize(request)
+            }
+        } finally {
+            Trace.endSection()
         }
     }
 
@@ -163,10 +170,15 @@ public object GridEngine {
         relocatedWithOriginals: Map<String, GridItem>,
         gridSize: GridSize
     ): List<GridItem> {
-        return RollbackEvaluator.evaluateRollback(
-            currentItems,
-            relocatedWithOriginals,
-            gridSize
-        )
+        Trace.beginSection("GridEngine.evaluateRollback")
+        return try {
+            RollbackEvaluator.evaluateRollback(
+                currentItems,
+                relocatedWithOriginals,
+                gridSize
+            )
+        } finally {
+            Trace.endSection()
+        }
     }
 }
