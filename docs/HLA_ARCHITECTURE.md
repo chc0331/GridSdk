@@ -72,6 +72,8 @@ flowchart TB
 | `PlacementExplorer` | `internal.engine` | 후보 배치 탐색, 상단-좌측 빈 공간 탐색, Add 전용 `findFirstEmptyPosition`/`exploreAddPosition` |
 | `CandidateValidator` | `internal.engine` | 경계·중복 제약 검사 |
 | `CandidateScorer` | `internal.engine` | 재배치 수, 맨해튼 거리, 상단-좌측 우선순위 스코어링 |
+| `ResizeInteractionState` | `internal.interaction` | LongPress → Drag 리사이즈 진입 상태 머신 |
+| `ResizeSpanCalculator` | `internal.util` | 드래그 기반 span 계산, clamp, 히스테리시스(깜빡임 방지) |
 | `ValidationUtils` | `internal.util` | 좌표/경계/겹침 검사 유틸 |
 
 ---
@@ -190,6 +192,8 @@ GridSdk/
 │       │       └── GridEngine.kt      # Engine Facade (공개 진입점)
 │       └── internal/            # 내부 구현
 │           ├── InternalApi.kt
+│           ├── interaction/
+│           │   └── ResizeInteractionState.kt
 │           ├── state/
 │           │   ├── OccupancyGrid.kt
 │           │   └── StateSnapshot.kt
@@ -198,6 +202,7 @@ GridSdk/
 │           │   ├── CandidateValidator.kt
 │           │   └── CandidateScorer.kt
 │           └── util/
+│               ├── ResizeSpanCalculator.kt
 │               └── ValidationUtils.kt
 └── sample-app/                  # 샘플 앱
     └── com.android.gridsdk.sample/
@@ -210,5 +215,6 @@ GridSdk/
 - ~~**Add 로직**~~: **완료** (4단계) - `PlacementExplorer.findFirstEmptyPosition`, `exploreAddPosition` 구현, `GridEngine.process(Add)` 지원
 - ~~**Engine Facade**~~: **완료** (4단계) - `GridEngine.process(request)` 공개 진입점 구현
 - ~~**Move 로직**~~: **완료** (5단계) - `GridEngine.processMove` 경계 검증(OutOfBounds), `exploreBestCandidate` 충돌 재배치, `GridEngineMoveTest` 단위 테스트
+- ~~**Resize 로직**~~: **완료** (6단계) - `ResizeInteractionState`, `ResizeSpanCalculator`, `GridEngine.processResize` (OutOfBounds/InvalidItem 검증), `GridEngineResizeTest` 단위 테스트
 - **롤백 규칙**: 드래그 중 원위치 복귀 로직 미구현 (7단계)
 - **Compose 통합**: 공개 Composable, 제스처 핸들러, 애니메이션 브리지 미구현 (8단계)

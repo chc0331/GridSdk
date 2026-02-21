@@ -95,7 +95,33 @@ public object GridEngine {
     private fun processResize(request: EngineRequest.Resize): EngineResult {
         val targetItem = request.items.find { it.id == request.itemId }
             ?: return EngineResult.failure(GridError.ItemNotFound(request.itemId))
+
+        // span 최소/최대 제약 검증
+        if (request.targetSpanX < 1 || request.targetSpanY < 1) {
+            return EngineResult.failure(
+                GridError.InvalidItem(
+                    request.itemId,
+                    "spanX and spanY must be greater than 0, got ${request.targetSpanX}x${request.targetSpanY}"
+                )
+            )
+        }
+
         val resizedItem = targetItem.resize(request.targetSpanX, request.targetSpanY)
+        if (!resizedItem.isValidIn(request.gridSize)) {
+            return EngineResult.failure(
+                GridError.OutOfBounds(
+                    itemId = request.itemId,
+                    position = GridError.Position(
+                        targetItem.x,
+                        targetItem.y,
+                        request.targetSpanX,
+                        request.targetSpanY
+                    ),
+                    gridSize = request.gridSize
+                )
+            )
+        }
+
         val candidate = PlacementExplorer.exploreBestCandidate(
             request.items,
             resizedItem,
