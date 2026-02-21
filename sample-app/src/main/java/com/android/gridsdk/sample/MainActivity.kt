@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,9 +45,40 @@ class MainActivity : ComponentActivity() {
         setContent {
             GridSdkTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    GridDemoScreen(modifier = Modifier.padding(innerPadding))
+                    MainScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
+        }
+    }
+}
+
+private enum class DemoTab { Basic, EdgeCase, GridSize }
+
+@Composable
+fun MainScreen(modifier: Modifier = Modifier) {
+    var selectedTab by remember { mutableStateOf(DemoTab.Basic) }
+    Column(modifier = modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTab.ordinal) {
+            Tab(
+                selected = selectedTab == DemoTab.Basic,
+                onClick = { selectedTab = DemoTab.Basic },
+                text = { Text("Basic") }
+            )
+            Tab(
+                selected = selectedTab == DemoTab.EdgeCase,
+                onClick = { selectedTab = DemoTab.EdgeCase },
+                text = { Text("Edge Case") }
+            )
+            Tab(
+                selected = selectedTab == DemoTab.GridSize,
+                onClick = { selectedTab = DemoTab.GridSize },
+                text = { Text("N/M Change") }
+            )
+        }
+        when (selectedTab) {
+            DemoTab.Basic -> GridDemoScreen(modifier = Modifier.fillMaxSize())
+            DemoTab.EdgeCase -> EdgeCaseDemoScreen(modifier = Modifier.fillMaxSize())
+            DemoTab.GridSize -> GridSizeChangeDemoScreen(modifier = Modifier.fillMaxSize())
         }
     }
 }
@@ -58,45 +91,85 @@ fun GridDemoScreen(modifier: Modifier = Modifier) {
     var lastError by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(8.dp)
         ) {
-            Button(
-                onClick = {
-                    val item = GridItem(
-                        id = "item_${nextId++}",
-                        x = 0,
-                        y = 0,
-                        spanX = 1,
-                        spanY = 1
-                    )
-                    val result = GridEngine.process(
-                        EngineRequest.Add(item, items.toList(), gridSize)
-                    )
-                    when (result) {
-                        is com.android.gridsdk.library.model.engine.EngineResult.Success -> {
-                            items.clear()
-                            items.addAll(result.applyTo(items.toList()))
-                            lastError = null
-                        }
-                        is com.android.gridsdk.library.model.engine.EngineResult.Failure -> {
-                            lastError = result.error.toString()
+            Text(
+                text = "Drag to move. Long press then drag to resize.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = {
+                        val item = GridItem(
+                            id = "item_${nextId++}",
+                            x = 0,
+                            y = 0,
+                            spanX = 1,
+                            spanY = 1
+                        )
+                        val result = GridEngine.process(
+                            EngineRequest.Add(item, items.toList(), gridSize)
+                        )
+                        when (result) {
+                            is com.android.gridsdk.library.model.engine.EngineResult.Success -> {
+                                val newItems = result.applyTo(items.toList())
+                                items.clear()
+                                items.addAll(newItems)
+                                lastError = null
+                            }
+                            is com.android.gridsdk.library.model.engine.EngineResult.Failure -> {
+                                lastError = result.error.toString()
+                            }
                         }
                     }
+                ) {
+                    Text("Add")
                 }
-            ) {
-                Text("Add")
-            }
-            lastError?.let { err ->
-                Text(
-                    text = err,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f)
-                )
+                Button(
+                    onClick = {
+                        lastError = null
+                        while (true) {
+                            val item = GridItem(
+                                id = "item_${nextId++}",
+                                x = 0,
+                                y = 0,
+                                spanX = 1,
+                                spanY = 1
+                            )
+                            val result = GridEngine.process(
+                                EngineRequest.Add(item, items.toList(), gridSize)
+                            )
+                            when (result) {
+                                is com.android.gridsdk.library.model.engine.EngineResult.Success -> {
+                                    val newItems = result.applyTo(items.toList())
+                                    items.clear()
+                                    items.addAll(newItems)
+                                }
+                                is com.android.gridsdk.library.model.engine.EngineResult.Failure -> {
+                                    lastError = result.error.toString()
+                                    break
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text("Add until full")
+                }
+                lastError?.let { err ->
+                    Text(
+                        text = err,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
         Box(

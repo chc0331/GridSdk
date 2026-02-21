@@ -68,8 +68,9 @@ val result = GridEngine.process(
 )
 when (result) {
     is EngineResult.Success -> {
+        val newItems = result.applyTo(items.toList())
         items.clear()
-        items.addAll(result.applyTo(items.toList()))
+        items.addAll(newItems)
     }
     is EngineResult.Failure -> {
         // result.error 처리 (예: Toast, Snackbar)
@@ -110,8 +111,9 @@ fun AdvancedGridDemo() {
                     )
                     when (result) {
                         is EngineResult.Success -> {
+                            val newItems = result.applyTo(items.toList())
                             items.clear()
-                            items.addAll(result.applyTo(items.toList()))
+                            items.addAll(newItems)
                             lastError = null
                         }
                         is EngineResult.Failure -> {

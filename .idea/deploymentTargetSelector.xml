@@ -5,7 +5,7 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="GridLayoutInstrumentedTest">
+      <SelectionState runConfigName="sample-app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
