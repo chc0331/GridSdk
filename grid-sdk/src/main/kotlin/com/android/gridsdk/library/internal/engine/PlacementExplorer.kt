@@ -69,6 +69,44 @@ internal object PlacementExplorer {
     }
 
     /**
+     * 상단-좌측(행 우선, 열 우선) 순으로 첫 번째 배치 가능한 빈 위치를 반환합니다.
+     *
+     * Add 시나리오에서 사용됩니다.
+     *
+     * @param items 현재 배치된 아이템 목록
+     * @param spanX 배치할 영역의 열 방향 span
+     * @param spanY 배치할 영역의 행 방향 span
+     * @param gridSize 그리드 크기
+     * @return 첫 번째 유효 위치 (x, y), 없으면 null
+     */
+    internal fun findFirstEmptyPosition(
+        items: List<GridItem>,
+        spanX: Int,
+        spanY: Int,
+        gridSize: GridSize
+    ): Pair<Int, Int>? {
+        return findTopLeftEmptyPositions(items, spanX, spanY, gridSize).firstOrNull()
+    }
+
+    /**
+     * 새 아이템을 상단-좌측 첫 빈 공간에 배치합니다.
+     *
+     * @param items 현재 아이템 목록
+     * @param item 추가할 아이템 (id, spanX, spanY 사용, x/y는 무시)
+     * @param gridSize 그리드 크기
+     * @return 배치된 아이템, 유효 위치가 없으면 null
+     */
+    internal fun exploreAddPosition(
+        items: List<GridItem>,
+        item: GridItem,
+        gridSize: GridSize
+    ): GridItem? {
+        val position = findFirstEmptyPosition(items, item.spanX, item.spanY, gridSize)
+            ?: return null
+        return item.moveTo(position.first, position.second)
+    }
+
+    /**
      * 남은 아이템들을 배치할 수 있는 모든 유효한 레이아웃을 탐색합니다.
      */
     private fun explorePlacements(

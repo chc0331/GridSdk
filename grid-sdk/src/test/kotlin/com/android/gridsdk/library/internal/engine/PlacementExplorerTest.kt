@@ -97,4 +97,65 @@ class PlacementExplorerTest {
         }
         assertEquals(1, relocatedCount)
     }
+
+    @Test
+    fun `findFirstEmptyPosition returns 0,0 for empty grid`() {
+        val items = emptyList<GridItem>()
+        val pos = PlacementExplorer.findFirstEmptyPosition(items, 1, 1, gridSize)
+
+        assertNotNull(pos)
+        assertEquals(0, pos!!.first)
+        assertEquals(0, pos.second)
+    }
+
+    @Test
+    fun `findFirstEmptyPosition returns first slot after occupied area`() {
+        val items = listOf(GridItem("a", 0, 0, 2, 2))
+        val pos = PlacementExplorer.findFirstEmptyPosition(items, 1, 1, gridSize)
+
+        assertNotNull(pos)
+        assertEquals(2, pos!!.first)
+        assertEquals(0, pos.second)
+    }
+
+    @Test
+    fun `findFirstEmptyPosition returns null when grid full`() {
+        val items = listOf(
+            GridItem("a", 0, 0, 2, 2),
+            GridItem("b", 2, 0, 2, 2),
+            GridItem("c", 0, 2, 2, 2),
+            GridItem("d", 2, 2, 2, 2)
+        )
+        val pos = PlacementExplorer.findFirstEmptyPosition(items, 1, 1, gridSize)
+
+        assertNull(pos)
+    }
+
+    @Test
+    fun `exploreAddPosition places item at first empty slot`() {
+        val items = listOf(GridItem("a", 0, 0, 1, 1))
+        val newItem = GridItem("b", 0, 0, 1, 1)
+
+        val result = PlacementExplorer.exploreAddPosition(items, newItem, gridSize)
+
+        assertNotNull(result)
+        assertEquals(1, result!!.x)
+        assertEquals(0, result.y)
+        assertEquals("b", result.id)
+    }
+
+    @Test
+    fun `exploreAddPosition returns null when no space`() {
+        val items = listOf(
+            GridItem("a", 0, 0, 2, 2),
+            GridItem("b", 2, 0, 2, 2),
+            GridItem("c", 0, 2, 2, 2),
+            GridItem("d", 2, 2, 2, 2)
+        )
+        val newItem = GridItem("e", 0, 0, 1, 1)
+
+        val result = PlacementExplorer.exploreAddPosition(items, newItem, gridSize)
+
+        assertNull(result)
+    }
 }
