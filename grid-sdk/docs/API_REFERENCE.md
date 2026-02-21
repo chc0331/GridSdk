@@ -8,7 +8,7 @@
 
 **패키지**: `com.android.gridsdk.library`
 
-N×M 고정 그리드 레이아웃 Composable. 드래그 이동, 롱프레스+드래그 리사이즈를 지원합니다.
+N×M 고정 그리드 레이아웃 Composable. 드래그로 이동, 롱프레스 시 핸들러 표시 후 핸들러 드래그로 리사이즈를 지원합니다.
 
 ```kotlin
 @Composable

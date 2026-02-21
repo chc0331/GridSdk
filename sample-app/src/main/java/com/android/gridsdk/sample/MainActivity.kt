@@ -97,7 +97,7 @@ fun GridDemoScreen(modifier: Modifier = Modifier) {
                 .padding(8.dp)
         ) {
             Text(
-                text = "Drag to move. Long press then drag to resize.",
+                text = "Drag to move. Long press to show resize handle, then drag handle to resize.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

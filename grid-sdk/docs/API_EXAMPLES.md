@@ -245,5 +245,5 @@ val rolledBack = GridEngine.evaluateRollback(
 | Add | 버튼 클릭 → `GridEngine.process(Add)` | 상단-좌측 첫 빈 공간 배치 |
 | Delete | 아이템 내 삭제 버튼 → `items.remove()` | 상태에서 제거 |
 | Move | 드래그 | `GridLayout` 내부에서 Move 요청 → 재배치 |
-| Resize | 롱프레스 후 드래그 | `GridLayout` 내부에서 Resize 요청 → 재배치 |
+| Resize | 롱프레스 → 핸들러 표시 → 핸들러 드래그 | `GridLayout` 내부에서 Resize 요청 → 재배치 |
 | Rollback | 드래그 중 포인터 이동 | `GridLayout` 내부에서 `evaluateRollback` 자동 호출 |

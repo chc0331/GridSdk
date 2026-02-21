@@ -9,7 +9,7 @@
 
 | 타입 | 패키지 | 설명 |
 |------|--------|------|
-| `GridLayout` | `com.android.gridsdk.library` | N×M 그리드 레이아웃 Composable. 드래그 이동, 롱프레스+드래그 리사이즈 지원 |
+| `GridLayout` | `com.android.gridsdk.library` | N×M 그리드 레이아웃 Composable. 드래그 이동, 롱프레스 후 핸들러 드래그 리사이즈 지원 |
 
 ---
 
