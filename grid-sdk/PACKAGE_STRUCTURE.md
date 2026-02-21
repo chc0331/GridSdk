@@ -6,14 +6,15 @@
 ```
 com.android.gridsdk.library
 ├── GridLayout.kt           # 메인 Composable 컴포넌트
-├── GridState.kt            # 공개 상태 관리
+├── GridSdkInfo.kt          # 버전/이름 상수
 ├── model/                  # 공개 데이터 모델
 │   ├── GridSize.kt
 │   ├── GridItem.kt
-│   └── GridConfig.kt
-└── gesture/                # 공개 제스처 API
-    ├── DragGesture.kt
-    └── ResizeGesture.kt
+│   ├── GridError.kt
+│   └── engine/
+│       ├── GridEngine.kt   # 엔진 진입점
+│       ├── EngineRequests.kt
+│       └── EngineResults.kt
 ```
 
 ### 공개 규칙:
@@ -26,17 +27,25 @@ com.android.gridsdk.library
 
 ```
 com.android.gridsdk.library.internal
+├── InternalApi.kt          # 내부 마커 어노테이션
+├── ui/                     # UI/제스처 구현
+│   ├── GridLayoutInternal.kt
+│   ├── DragGestureHandler.kt
+│   ├── ResizeGestureHandler.kt
+│   └── EngineStateBridge.kt
 ├── engine/                 # 배치 엔진 코어
-│   ├── LayoutEngine.kt
-│   ├── PlacementAlgorithm.kt
-│   └── CollisionDetector.kt
+│   ├── PlacementExplorer.kt
+│   ├── CandidateValidator.kt
+│   ├── CandidateScorer.kt
+│   └── RollbackEvaluator.kt
 ├── state/                  # 내부 상태 관리
 │   ├── OccupancyGrid.kt
+│   ├── RelocatedItemTracker.kt
 │   └── StateSnapshot.kt
-├── animation/              # 애니메이션 구현
-│   └── ItemAnimator.kt
-└── util/                   # 내부 유틸리티
-    ├── CoordinateUtils.kt
+├── interaction/
+│   └── ResizeInteractionState.kt
+└── util/
+    ├── ResizeSpanCalculator.kt
     └── ValidationUtils.kt
 ```
 
@@ -57,9 +66,12 @@ package com.android.gridsdk.library
  */
 @Composable
 public fun GridLayout(
-    state: GridState,
+    gridSize: GridSize,
+    items: List<GridItem>,
+    onItemsChange: (List<GridItem>) -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable (GridItem) -> Unit
+    onFailure: ((GridError) -> Unit)? = null,
+    cellContent: @Composable (GridItem) -> Unit = {}
 ) {
     // implementation
 }

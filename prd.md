@@ -158,12 +158,12 @@
 - [x] 기본 접근성(터치 영역/상태 설명) 점검
 
 ## 9) 공개 API 안정화 (SDK 관점)
-- [ ] 외부 공개 타입 목록 확정 (`public` 최소화)
-- [ ] 실험 API 여부(`@Experimental`) 정책 결정
-- [ ] 파라미터 기본값/nullable 정책 확정
-- [ ] API 사용 예제 코드(최소/고급) 작성
-- [ ] 내부 구현 세부사항 `internal` 격리 확인
-- [ ] API 변경 가이드라인(semver 기준) 문서화
+- [x] 외부 공개 타입 목록 확정 (`public` 최소화) — `grid-sdk/docs/PUBLIC_API.md`
+- [x] 실험 API 여부(`@Experimental`) 정책 결정 — `grid-sdk/docs/API_POLICY.md`
+- [x] 파라미터 기본값/nullable 정책 확정 — `grid-sdk/docs/API_POLICY.md`
+- [x] API 사용 예제 코드(최소/고급) 작성 — `grid-sdk/docs/API_EXAMPLES.md`
+- [x] 내부 구현 세부사항 `internal` 격리 확인 — `grid-sdk/docs/INTERNAL_ISOLATION.md`
+- [x] API 변경 가이드라인(semver 기준) 문서화 — `grid-sdk/docs/API_CHANGELOG_GUIDELINES.md`
 
 ## 10) 테스트 전략 (상세 검증 중심)
 - [ ] 코어 엔진 순수 JVM 테스트 세팅
