@@ -4,6 +4,7 @@ import com.android.gridsdk.library.model.GridError
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
 import com.android.gridsdk.library.internal.engine.PlacementExplorer
+import com.android.gridsdk.library.internal.engine.RollbackEvaluator
 
 /**
  * 그리드 배치 엔진의 공개 진입점
@@ -144,5 +145,28 @@ public object GridEngine {
                 )
             )
         }
+    }
+
+    /**
+     * 드래그 중 재배치된 아이템 중 원위치 복귀 가능한 항목을 원위치로 되돌린 레이아웃을 반환합니다.
+     *
+     * PRD 롤백 규칙: "드래그 중 재배치되었던 아이템은, 본래 위치가 다시 유효해지면 원위치로 복귀"
+     * 호출자는 Move/Resize 성공 후 이 메서드를 호출하여 롤백을 적용할 수 있습니다.
+     *
+     * @param currentItems 현재 아이템 레이아웃 (드래그/리사이즈 결과 적용 후)
+     * @param relocatedWithOriginals 재배치된 아이템의 원래 위치 (itemId -> originalItem)
+     * @param gridSize 그리드 크기
+     * @return 복귀 적용된 아이템 목록 (복귀 불가 시 currentItems와 동일)
+     */
+    public fun evaluateRollback(
+        currentItems: List<GridItem>,
+        relocatedWithOriginals: Map<String, GridItem>,
+        gridSize: GridSize
+    ): List<GridItem> {
+        return RollbackEvaluator.evaluateRollback(
+            currentItems,
+            relocatedWithOriginals,
+            gridSize
+        )
     }
 }
