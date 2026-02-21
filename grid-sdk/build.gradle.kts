@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    `maven-publish`
 }
 
 android {
@@ -49,4 +50,46 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+                
+                groupId = "com.android.gridsdk"
+                artifactId = "grid-sdk"
+                version = "0.1.0"
+                
+                pom {
+                    name.set("GridSdk")
+                    description.set("A flexible grid layout library for Jetpack Compose")
+                    url.set("https://github.com/yourusername/grid-sdk")
+                    
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+                    
+                    developers {
+                        developer {
+                            id.set("gridsdk")
+                            name.set("GridSdk Team")
+                            email.set("gridsdk@example.com")
+                        }
+                    }
+                }
+            }
+        }
+        
+        repositories {
+            maven {
+                name = "LocalRepo"
+                url = uri("${rootProject.buildDir}/repo")
+            }
+        }
+    }
 }
