@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import com.android.gridsdk.library.internal.ui.GridLayoutInternal
+import com.android.gridsdk.library.internal.ui.GridLayoutContent
 import com.android.gridsdk.library.model.GridError
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
@@ -38,7 +38,7 @@ public fun GridLayout(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val cellWidthPx = with(density) { maxWidth.toPx() } / gridSize.columns
         val cellHeightPx = with(density) { maxHeight.toPx() } / gridSize.rows
-        GridLayoutInternal.GridLayoutContent(
+        GridLayoutContent(
             gridSize = gridSize,
             items = items,
             onItemsChange = onItemsChange,
