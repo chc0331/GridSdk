@@ -25,7 +25,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -36,6 +35,7 @@ import com.android.gridsdk.library.internal.ui.ResizeGestureHandler.resizeHandle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.android.gridsdk.library.internal.InternalApi
+import com.android.gridsdk.library.internal.util.ResizeCorner
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
 import kotlin.math.roundToInt
@@ -72,6 +72,7 @@ internal object GridLayoutInternal {
         var resizeModeItemId by remember { mutableStateOf<String?>(null) }
         var resizePreviewSpan by remember { mutableStateOf<Pair<Int, Int>?>(null) }
         var resizePreviewSizePx by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+        var resizePreviewOffsetPx by remember { mutableStateOf<Pair<Float, Float>?>(null) }
         val density = LocalDensity.current
         val cornerHandleSizePx = with(density) { CornerHandleSizeDp.toPx() }
 
@@ -84,6 +85,7 @@ internal object GridLayoutInternal {
                             resizeModeItemId = null
                             resizePreviewSpan = null
                             resizePreviewSizePx = null
+                            resizePreviewOffsetPx = null
                         }
                 )
             }
@@ -106,6 +108,7 @@ internal object GridLayoutInternal {
                             resizeModeItemId = null
                             resizePreviewSpan = null
                             resizePreviewSizePx = null
+                            resizePreviewOffsetPx = null
                         }
                     )
                 }
@@ -119,6 +122,7 @@ internal object GridLayoutInternal {
                         displaySpanX = displaySpanX,
                         displaySpanY = displaySpanY,
                         resizePreviewSizePx = resizePreviewSizePx,
+                        resizePreviewOffsetPx = resizePreviewOffsetPx,
                         items = items,
                         gridSize = gridSize,
                         cellWidthPx = cellWidthPx,
@@ -131,10 +135,14 @@ internal object GridLayoutInternal {
                         onPreviewSizePxChange = { sizePx ->
                             resizePreviewSizePx = sizePx
                         },
+                        onPreviewOffsetPxChange = { offsetPx ->
+                            resizePreviewOffsetPx = offsetPx
+                        },
                         onClearResizeMode = {
                             resizeModeItemId = null
                             resizePreviewSpan = null
                             resizePreviewSizePx = null
+                            resizePreviewOffsetPx = null
                         }
                     )
                 }
@@ -229,6 +237,7 @@ internal object GridLayoutInternal {
         displaySpanX: Int,
         displaySpanY: Int,
         resizePreviewSizePx: Pair<Float, Float>?,
+        resizePreviewOffsetPx: Pair<Float, Float>?,
         items: List<GridItem>,
         gridSize: GridSize,
         cellWidthPx: Float,
@@ -237,13 +246,15 @@ internal object GridLayoutInternal {
         bridge: EngineStateBridge,
         onPreviewSpanChange: (Pair<Int, Int>?) -> Unit,
         onPreviewSizePxChange: (Pair<Float, Float>?) -> Unit,
+        onPreviewOffsetPxChange: (Pair<Float, Float>?) -> Unit,
         onClearResizeMode: () -> Unit
     ) {
         val updatedOnPreviewSpanChange = rememberUpdatedState(onPreviewSpanChange)
         val updatedOnPreviewSizePxChange = rememberUpdatedState(onPreviewSizePxChange)
+        val updatedOnPreviewOffsetPxChange = rememberUpdatedState(onPreviewOffsetPxChange)
         val itemsState = rememberUpdatedState(items)
-        val offsetXPx = item.x * cellWidthPx
-        val offsetYPx = item.y * cellHeightPx
+        val offsetXPx = resizePreviewOffsetPx?.first ?: (item.x * cellWidthPx)
+        val offsetYPx = resizePreviewOffsetPx?.second ?: (item.y * cellHeightPx)
         val (widthPx, heightPx) = when (val sizePx = resizePreviewSizePx) {
             null -> displaySpanX * cellWidthPx to displaySpanY * cellHeightPx
             else -> sizePx.first to sizePx.second
@@ -251,10 +262,6 @@ internal object GridLayoutInternal {
         val density = LocalDensity.current
         val widthDp = with(density) { widthPx.toDp() }
         val heightDp = with(density) { heightPx.toDp() }
-        val bottomEndHandleOffsetInItemPx = Offset(
-            widthPx - cornerHandleSizePx,
-            heightPx - cornerHandleSizePx
-        )
         Box(
             modifier = Modifier
                 .offset { IntOffset(offsetXPx.roundToInt(), offsetYPx.roundToInt()) }
@@ -275,58 +282,7 @@ internal object GridLayoutInternal {
             )
             ResizeCornerHandle(
                 modifier = Modifier.align(Alignment.TopStart),
-                hasResizeGesture = false,
-                cornerHandleSizePx = cornerHandleSizePx,
-                currentOverlayWidthPx = widthPx,
-                currentOverlayHeightPx = heightPx,
-                item = item,
-                items = items,
-                itemsState = null,
-                gridSize = gridSize,
-                cellWidthPx = cellWidthPx,
-                cellHeightPx = cellHeightPx,
-                handleOffsetInItemPx = Offset.Zero,
-                bridge = bridge,
-                itemId = item.id,
-                onPreviewSpanChange = {}
-            )
-            ResizeCornerHandle(
-                modifier = Modifier.align(Alignment.TopEnd),
-                hasResizeGesture = false,
-                cornerHandleSizePx = cornerHandleSizePx,
-                currentOverlayWidthPx = widthPx,
-                currentOverlayHeightPx = heightPx,
-                item = item,
-                items = items,
-                itemsState = null,
-                gridSize = gridSize,
-                cellWidthPx = cellWidthPx,
-                cellHeightPx = cellHeightPx,
-                handleOffsetInItemPx = Offset.Zero,
-                bridge = bridge,
-                itemId = item.id,
-                onPreviewSpanChange = {}
-            )
-            ResizeCornerHandle(
-                modifier = Modifier.align(Alignment.BottomStart),
-                hasResizeGesture = false,
-                cornerHandleSizePx = cornerHandleSizePx,
-                currentOverlayWidthPx = widthPx,
-                currentOverlayHeightPx = heightPx,
-                item = item,
-                items = items,
-                itemsState = null,
-                gridSize = gridSize,
-                cellWidthPx = cellWidthPx,
-                cellHeightPx = cellHeightPx,
-                handleOffsetInItemPx = Offset.Zero,
-                bridge = bridge,
-                itemId = item.id,
-                onPreviewSpanChange = {}
-            )
-            ResizeCornerHandle(
-                modifier = Modifier.align(Alignment.BottomEnd),
-                hasResizeGesture = true,
+                resizeCorner = ResizeCorner.TopStart,
                 cornerHandleSizePx = cornerHandleSizePx,
                 currentOverlayWidthPx = widthPx,
                 currentOverlayHeightPx = heightPx,
@@ -336,11 +292,65 @@ internal object GridLayoutInternal {
                 gridSize = gridSize,
                 cellWidthPx = cellWidthPx,
                 cellHeightPx = cellHeightPx,
-                handleOffsetInItemPx = bottomEndHandleOffsetInItemPx,
                 bridge = bridge,
                 itemId = item.id,
                 onPreviewSpanChange = { span -> updatedOnPreviewSpanChange.value(span) },
-                onPreviewSizePxChange = { sizePx -> updatedOnPreviewSizePxChange.value(sizePx) }
+                onPreviewSizePxChange = { sizePx -> updatedOnPreviewSizePxChange.value(sizePx) },
+                onPreviewOffsetPxChange = { offsetPx -> updatedOnPreviewOffsetPxChange.value(offsetPx) }
+            )
+            ResizeCornerHandle(
+                modifier = Modifier.align(Alignment.TopEnd),
+                resizeCorner = ResizeCorner.TopEnd,
+                cornerHandleSizePx = cornerHandleSizePx,
+                currentOverlayWidthPx = widthPx,
+                currentOverlayHeightPx = heightPx,
+                item = item,
+                items = items,
+                itemsState = itemsState,
+                gridSize = gridSize,
+                cellWidthPx = cellWidthPx,
+                cellHeightPx = cellHeightPx,
+                bridge = bridge,
+                itemId = item.id,
+                onPreviewSpanChange = { span -> updatedOnPreviewSpanChange.value(span) },
+                onPreviewSizePxChange = { sizePx -> updatedOnPreviewSizePxChange.value(sizePx) },
+                onPreviewOffsetPxChange = { offsetPx -> updatedOnPreviewOffsetPxChange.value(offsetPx) }
+            )
+            ResizeCornerHandle(
+                modifier = Modifier.align(Alignment.BottomStart),
+                resizeCorner = ResizeCorner.BottomStart,
+                cornerHandleSizePx = cornerHandleSizePx,
+                currentOverlayWidthPx = widthPx,
+                currentOverlayHeightPx = heightPx,
+                item = item,
+                items = items,
+                itemsState = itemsState,
+                gridSize = gridSize,
+                cellWidthPx = cellWidthPx,
+                cellHeightPx = cellHeightPx,
+                bridge = bridge,
+                itemId = item.id,
+                onPreviewSpanChange = { span -> updatedOnPreviewSpanChange.value(span) },
+                onPreviewSizePxChange = { sizePx -> updatedOnPreviewSizePxChange.value(sizePx) },
+                onPreviewOffsetPxChange = { offsetPx -> updatedOnPreviewOffsetPxChange.value(offsetPx) }
+            )
+            ResizeCornerHandle(
+                modifier = Modifier.align(Alignment.BottomEnd),
+                resizeCorner = ResizeCorner.BottomEnd,
+                cornerHandleSizePx = cornerHandleSizePx,
+                currentOverlayWidthPx = widthPx,
+                currentOverlayHeightPx = heightPx,
+                item = item,
+                items = items,
+                itemsState = itemsState,
+                gridSize = gridSize,
+                cellWidthPx = cellWidthPx,
+                cellHeightPx = cellHeightPx,
+                bridge = bridge,
+                itemId = item.id,
+                onPreviewSpanChange = { span -> updatedOnPreviewSpanChange.value(span) },
+                onPreviewSizePxChange = { sizePx -> updatedOnPreviewSizePxChange.value(sizePx) },
+                onPreviewOffsetPxChange = { offsetPx -> updatedOnPreviewOffsetPxChange.value(offsetPx) }
             )
         }
     }
@@ -348,55 +358,46 @@ internal object GridLayoutInternal {
     @Composable
     private fun ResizeCornerHandle(
         modifier: Modifier,
-        hasResizeGesture: Boolean,
+        resizeCorner: ResizeCorner,
         cornerHandleSizePx: Float,
         currentOverlayWidthPx: Float,
         currentOverlayHeightPx: Float,
         item: GridItem,
         items: List<GridItem>,
-        itemsState: State<List<GridItem>>?,
+        itemsState: State<List<GridItem>>,
         gridSize: GridSize,
         cellWidthPx: Float,
         cellHeightPx: Float,
-        handleOffsetInItemPx: Offset,
         bridge: EngineStateBridge,
         itemId: String,
         onPreviewSpanChange: (Pair<Int, Int>?) -> Unit,
-        onPreviewSizePxChange: (Pair<Float, Float>?) -> Unit = {}
+        onPreviewSizePxChange: (Pair<Float, Float>?) -> Unit,
+        onPreviewOffsetPxChange: (Pair<Float, Float>?) -> Unit = {}
     ) {
         val overlaySizeState = rememberUpdatedState(currentOverlayWidthPx to currentOverlayHeightPx)
         val baseModifier = modifier
             .size(CornerHandleSizeDp)
-            .then(
-                if (hasResizeGesture && itemsState != null) {
-                    Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { }
-                        .resizeHandleGesture(
-                        item = item,
-                        itemsState = itemsState,
-                        gridSize = gridSize,
-                        cellWidthPx = cellWidthPx,
-                        cellHeightPx = cellHeightPx,
-                        cornerHandleSizePx = cornerHandleSizePx,
-                        overlaySizeState = overlaySizeState,
-                        handleOffsetInItemPx = handleOffsetInItemPx,
-                        bridge = bridge,
-                        previousSpanX = item.spanX,
-                        previousSpanY = item.spanY,
-                        onPreviewSpanChange = onPreviewSpanChange,
-                        onPreviewSizePxChange = onPreviewSizePxChange
-                    )
-                } else {
-                    Modifier
-                }
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { }
+            .resizeHandleGesture(
+                item = item,
+                itemsState = itemsState,
+                gridSize = gridSize,
+                cellWidthPx = cellWidthPx,
+                cellHeightPx = cellHeightPx,
+                cornerHandleSizePx = cornerHandleSizePx,
+                overlaySizeState = overlaySizeState,
+                resizeCorner = resizeCorner,
+                bridge = bridge,
+                previousSpanX = item.spanX,
+                previousSpanY = item.spanY,
+                onPreviewSpanChange = onPreviewSpanChange,
+                onPreviewSizePxChange = onPreviewSizePxChange,
+                onPreviewOffsetPxChange = onPreviewOffsetPxChange
             )
-            .then(
-                if (hasResizeGesture) {
-                    Modifier.semantics {
-                        contentDescription = "Resize handle"
-                        testTag = "resize-handle-$itemId"
-                    }
-                } else Modifier
-            )
+            .semantics {
+                contentDescription = "Resize handle"
+                testTag = "resize-handle-$itemId"
+            }
         val outlineColor = MaterialTheme.colorScheme.outline
         Box(
             modifier = baseModifier,

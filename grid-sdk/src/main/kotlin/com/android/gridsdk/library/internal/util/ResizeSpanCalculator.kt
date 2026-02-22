@@ -90,6 +90,31 @@ internal object ResizeSpanCalculator {
     }
 
     /**
+     * 코너 리사이즈 결과 (newX, newY, newSpanX, newSpanY)를 그리드 경계 내로 clamp합니다.
+     *
+     * - newX, newY >= 0
+     * - newSpanX, newSpanY >= 1
+     * - newX + newSpanX <= columns, newY + newSpanY <= rows
+     *
+     * @return first = (clampedNewX, clampedNewY), second = (clampedSpanX, clampedSpanY)
+     */
+    internal fun clampResizeResult(
+        newX: Int,
+        newY: Int,
+        newSpanX: Int,
+        newSpanY: Int,
+        gridSize: GridSize
+    ): Pair<Pair<Int, Int>, Pair<Int, Int>> {
+        val clampedX = newX.coerceIn(0, gridSize.columns - 1)
+        val clampedY = newY.coerceIn(0, gridSize.rows - 1)
+        val maxSpanX = (gridSize.columns - clampedX).coerceAtLeast(1)
+        val maxSpanY = (gridSize.rows - clampedY).coerceAtLeast(1)
+        val spanX = newSpanX.coerceIn(1, maxSpanX)
+        val spanY = newSpanY.coerceIn(1, maxSpanY)
+        return (clampedX to clampedY) to (spanX to spanY)
+    }
+
+    /**
      * 픽셀 드래그 델타를 셀 델타로 변환합니다.
      *
      * @param deltaPx 픽셀 단위 델타
