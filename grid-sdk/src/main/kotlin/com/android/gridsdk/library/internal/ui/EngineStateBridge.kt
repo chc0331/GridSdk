@@ -48,6 +48,46 @@ internal class EngineStateBridge(
     }
 
     /**
+     * Move + Resize 성공 결과를 한 번에 적용하여 onItemsChange를 1회만 호출합니다.
+     * TopEnd/TopStart/BottomStart 리사이즈에서 재구성 횟수를 줄여 실시간 드래그 체감을 개선합니다.
+     *
+     * @param moveSuccess Move 엔진 성공 결과
+     * @param resizeSuccess Resize 엔진 성공 결과 (moveSuccess.applyTo(originalItems) 기준)
+     * @param originalItems 리사이즈 시작 시점의 아이템 목록
+     * @param gridSize 그리드 크기
+     * @param resizedItemId 리사이즈 대상 아이템 ID
+     */
+    internal fun applySuccessBatched(
+        moveSuccess: EngineResult.Success,
+        resizeSuccess: EngineResult.Success,
+        originalItems: List<GridItem>,
+        gridSize: GridSize,
+        resizedItemId: String
+    ) {
+        val newItems = moveSuccess.applyTo(originalItems)
+        val finalItems = resizeSuccess.applyTo(newItems)
+        val targetItem = finalItems.find { it.id == resizedItemId }!!
+        val relocatedIds = (moveSuccess.relocatedItems.map { it.id } + resizeSuccess.relocatedItems.map { it.id })
+            .distinct()
+            .filter { it != resizedItemId }
+        val combinedRelocated = relocatedIds.mapNotNull { id -> finalItems.find { it.id == id } }
+        val batchedResult = EngineResult.success(targetItem, combinedRelocated)
+        val relocatedWithOriginals = batchedResult.relocatedItems.mapNotNull { relocated ->
+            val original = originalItems.find { it.id == relocated.id }
+            if (original != null && (relocated.x != original.x || relocated.y != original.y)) {
+                relocated.id to original
+            } else {
+                null
+            }
+        }.toMap()
+        if (relocatedWithOriginals.isNotEmpty()) {
+            relocatedTracker.addRelocated(relocatedWithOriginals)
+        }
+        onItemsChange(finalItems)
+        applyRollback(finalItems, gridSize)
+    }
+
+    /**
      * EngineResult.Failure 시 기존 상태 유지, onFailure 콜백 호출
      */
     internal fun applyFailure(result: EngineResult.Failure) {

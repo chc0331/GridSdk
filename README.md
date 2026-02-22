@@ -98,6 +98,7 @@ when (result) {
 | [grid-sdk/docs/API_EXAMPLES.md](grid-sdk/docs/API_EXAMPLES.md) | 사용 예제 |
 | [grid-sdk/docs/API_REFERENCE.md](grid-sdk/docs/API_REFERENCE.md) | API 레퍼런스 |
 | [grid-sdk/docs/LIMITATIONS.md](grid-sdk/docs/LIMITATIONS.md) | 제한사항 / Known Issues |
+| [grid-sdk/docs/RESIZE_HANDLER_LOGIC.md](grid-sdk/docs/RESIZE_HANDLER_LOGIC.md) | 리사이즈 핸들러 동작 로직 분석 |
 | [docs/HLA_ARCHITECTURE.md](docs/HLA_ARCHITECTURE.md) | 아키텍처 개요 |
 | [BUILD_GUIDE.md](BUILD_GUIDE.md) | 빌드 및 배포 가이드 |
 
