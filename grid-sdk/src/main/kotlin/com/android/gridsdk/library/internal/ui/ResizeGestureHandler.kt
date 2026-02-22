@@ -26,6 +26,186 @@ import com.android.gridsdk.library.model.engine.GridEngine
 internal object ResizeGestureHandler {
 
     /**
+     * Move 후 Resize를 순차 적용하고, 성공 시 배치 적용 및 프리뷰 오프셋/사이즈 갱신 콜백 호출.
+     *
+     * @return Move 실패 시 false (호출부에서 return 처리), 그 외 true
+     */
+    private fun applyMoveAndResize(
+        itemId: String,
+        newX: Int,
+        newY: Int,
+        targetSpanX: Int,
+        targetSpanY: Int,
+        items: List<GridItem>,
+        gridSize: GridSize,
+        bridge: EngineStateBridge,
+        successOffsetPx: Pair<Float, Float>,
+        successSizePx: Pair<Float, Float>,
+        onBatchedSuccess: (offsetPx: Pair<Float, Float>, sizePx: Pair<Float, Float>) -> Unit
+    ): Boolean {
+        val moveResult = GridEngine.process(EngineRequest.move(itemId, newX, newY, items, gridSize))
+        if (moveResult is EngineResult.Failure) {
+            bridge.applyFailure(moveResult)
+            return false
+        }
+        val newItems = (moveResult as EngineResult.Success).applyTo(items)
+        when (val resizeResult = GridEngine.process(EngineRequest.resize(itemId, targetSpanX, targetSpanY, newItems, gridSize))) {
+            is EngineResult.Success -> {
+                bridge.applySuccessBatched(moveResult, resizeResult, items, gridSize, itemId)
+                onBatchedSuccess(successOffsetPx, successSizePx)
+            }
+            is EngineResult.Failure -> {
+                bridge.applySuccess(moveResult, items, gridSize)
+                bridge.applyFailure(resizeResult)
+            }
+        }
+        return true
+    }
+
+    /**
+     * 코너별 고정 엣지 스냅샷 값 (이번 프레임에 사용할 값 + 다음 프레임을 위해 갱신할 var 값).
+     */
+    private data class FixedEdgesSnapshot(
+        val fixedRight: Int,
+        val fixedBottom: Int,
+        val dragStartItemOffsetXPx: Float,
+        val newDragStartFixedRight: Int,
+        val newDragStartFixedBottom: Int,
+        val newDragStartItemOffsetXPx: Float
+    )
+
+    /**
+     * 코너에 따라 고정 엣지(fixedRight/fixedBottom) 및 드래그 시작 시 아이템 offsetX 스냅샷을 한 곳에서 계산.
+     * 호출부에서 newDragStart* 값을 var에 반영하고, fixedRight/fixedBottom/dragStartItemOffsetXPx를 이번 프레임 계산에 사용.
+     */
+    private fun snapshotFixedEdges(
+        resizeCorner: ResizeCorner,
+        currentItem: GridItem,
+        cellWidthPx: Float,
+        currentFixedRight: Int,
+        currentFixedBottom: Int,
+        currentItemOffsetXPx: Float
+    ): FixedEdgesSnapshot = when (resizeCorner) {
+        ResizeCorner.BottomEnd -> FixedEdgesSnapshot(-1, -1, -1f, -1, -1, -1f)
+        ResizeCorner.TopStart -> {
+            val newRight = if (currentFixedRight < 0) currentItem.x + currentItem.spanX - 1 else currentFixedRight
+            val newBottom = if (currentFixedBottom < 0) currentItem.y + currentItem.spanY - 1 else currentFixedBottom
+            FixedEdgesSnapshot(newRight, newBottom, -1f, newRight, newBottom, -1f)
+        }
+        ResizeCorner.TopEnd -> {
+            val newBottom = if (currentFixedBottom < 0) currentItem.y + currentItem.spanY - 1 else currentFixedBottom
+            FixedEdgesSnapshot(-1, newBottom, -1f, -1, newBottom, -1f)
+        }
+        ResizeCorner.BottomStart -> {
+            val newRight = if (currentFixedRight < 0) currentItem.x + currentItem.spanX - 1 else currentFixedRight
+            val newOffsetX = if (currentItemOffsetXPx < 0f) currentItem.x * cellWidthPx else currentItemOffsetXPx
+            FixedEdgesSnapshot(newRight, -1, newOffsetX, newRight, -1, newOffsetX)
+        }
+    }
+
+    /**
+     * 코너별 프리뷰 오프셋(좌상)과 크기(너비, 높이) px를 계산.
+     *
+     * @param absGridX BottomStart 전용: 터치 X + 드래그 시작 시 아이템 offsetX (그 외 0f)
+     * @return first = (offsetXPx, offsetYPx), second = (widthPx, heightPx)
+     */
+    private fun computePreviewOffsetAndSize(
+        resizeCorner: ResizeCorner,
+        gridPos: Offset,
+        itemOffsetPx: Offset,
+        currentItem: GridItem,
+        fixedRightPx: Float,
+        fixedBottomPx: Float,
+        absGridX: Float,
+        cellWidthPx: Float,
+        cellHeightPx: Float,
+        gridSize: GridSize
+    ): Pair<Pair<Float, Float>, Pair<Float, Float>> = when (resizeCorner) {
+        ResizeCorner.BottomEnd -> {
+            val widthPx = (gridPos.x - itemOffsetPx.x)
+                .coerceIn(cellWidthPx, (gridSize.columns - currentItem.x) * cellWidthPx)
+            val heightPx = (gridPos.y - itemOffsetPx.y)
+                .coerceIn(cellHeightPx, (gridSize.rows - currentItem.y) * cellHeightPx)
+            (itemOffsetPx.x to itemOffsetPx.y) to (widthPx to heightPx)
+        }
+        ResizeCorner.TopStart -> {
+            val offsetXPx = gridPos.x.coerceIn(0f, fixedRightPx - cellWidthPx)
+            val offsetYPx = gridPos.y.coerceIn(0f, fixedBottomPx - cellHeightPx)
+            val widthPx = (fixedRightPx - offsetXPx).coerceIn(cellWidthPx, fixedRightPx)
+            val heightPx = (fixedBottomPx - offsetYPx).coerceIn(cellHeightPx, fixedBottomPx)
+            (offsetXPx to offsetYPx) to (widthPx to heightPx)
+        }
+        ResizeCorner.TopEnd -> {
+            val offsetXPx = itemOffsetPx.x
+            val offsetYPx = gridPos.y.coerceIn(0f, fixedBottomPx - cellHeightPx)
+            val widthPx = (gridPos.x - itemOffsetPx.x).coerceIn(
+                cellWidthPx, (gridSize.columns - currentItem.x) * cellWidthPx
+            )
+            val heightPx = (fixedBottomPx - offsetYPx).coerceIn(cellHeightPx, fixedBottomPx)
+            (offsetXPx to offsetYPx) to (widthPx to heightPx)
+        }
+        ResizeCorner.BottomStart -> {
+            val offsetXPx = absGridX.coerceIn(0f, fixedRightPx - cellWidthPx)
+            val offsetYPx = itemOffsetPx.y
+            val widthPx = (fixedRightPx - offsetXPx).coerceIn(cellWidthPx, fixedRightPx)
+            val heightPx = (gridPos.y - itemOffsetPx.y).coerceIn(
+                cellHeightPx, (gridSize.rows - currentItem.y) * cellHeightPx
+            )
+            (offsetXPx to offsetYPx) to (widthPx to heightPx)
+        }
+    }
+
+    /**
+     * Move+Resize 코너(TopStart, TopEnd, BottomStart)에서 드래그 끝 셀 → (newX, newY, newSpanX, newSpanY) 계산 후 clamp.
+     *
+     * @param dragEndCellXLocal BottomStart 전용: absGridX 기반 X 셀 (그 외는 dragEndCellX 사용)
+     */
+    private data class PositionAndSpan(val newX: Int, val newY: Int, val newSpanX: Int, val newSpanY: Int)
+
+    private fun computePositionAndSpanForCorner(
+        resizeCorner: ResizeCorner,
+        currentItem: GridItem,
+        dragEndCellX: Int,
+        dragEndCellY: Int,
+        dragEndCellXLocal: Int,
+        fixedRight: Int,
+        fixedBottom: Int,
+        gridSize: GridSize
+    ): PositionAndSpan = when (resizeCorner) {
+        ResizeCorner.BottomEnd -> throw IllegalArgumentException("BottomEnd does not use computePositionAndSpanForCorner")
+        ResizeCorner.TopStart -> {
+            var newX = dragEndCellX.coerceIn(0, fixedRight)
+            var newY = dragEndCellY.coerceIn(0, fixedBottom)
+            var newSpanX = (fixedRight - newX + 1).coerceAtLeast(1)
+            var newSpanY = (fixedBottom - newY + 1).coerceAtLeast(1)
+            val clampResult = ResizeSpanCalculator.clampResizeResult(newX, newY, newSpanX, newSpanY, gridSize)
+            val (clampedX, clampedY) = clampResult.first
+            val (clampedSpanX, clampedSpanY) = clampResult.second
+            PositionAndSpan(clampedX, clampedY, clampedSpanX, clampedSpanY)
+        }
+        ResizeCorner.TopEnd -> {
+            val dragEndX = dragEndCellX.coerceIn(currentItem.x, gridSize.columns - 1)
+            var newY = dragEndCellY.coerceIn(0, fixedBottom)
+            var newSpanX = (dragEndX - currentItem.x + 1).coerceAtLeast(1)
+            var newSpanY = (fixedBottom - newY + 1).coerceAtLeast(1)
+            val clampResult = ResizeSpanCalculator.clampResizeResult(currentItem.x, newY, newSpanX, newSpanY, gridSize)
+            val (_, clampedY) = clampResult.first
+            val (clampedSpanX, clampedSpanY) = clampResult.second
+            PositionAndSpan(currentItem.x, clampedY, clampedSpanX, clampedSpanY)
+        }
+        ResizeCorner.BottomStart -> {
+            var newX = dragEndCellXLocal.coerceIn(0, fixedRight)
+            val dragEndY = dragEndCellY.coerceIn(currentItem.y, gridSize.rows - 1)
+            var newSpanX = (fixedRight - newX + 1).coerceAtLeast(1)
+            var newSpanY = (dragEndY - currentItem.y + 1).coerceAtLeast(1)
+            val clampResult = ResizeSpanCalculator.clampResizeResult(newX, currentItem.y, newSpanX, newSpanY, gridSize)
+            val (clampedX, _) = clampResult.first
+            val (clampedSpanX, clampedSpanY) = clampResult.second
+            PositionAndSpan(clampedX, currentItem.y, clampedSpanX, clampedSpanY)
+        }
+    }
+
+    /**
      * 리사이즈 핸들러에 드래그 제스처를 연결하는 Modifier.
      *
      * @param resizeCorner 핸들 코너 (고정 쪽 및 계산 방식 결정)
@@ -131,11 +311,10 @@ internal object ResizeGestureHandler {
 
             when (resizeCorner) {
                 ResizeCorner.BottomEnd -> {
-                    val previewWidthPx = (gridPos.x - itemOffsetPx.x)
-                        .coerceIn(cellWidthPx, (gridSize.columns - currentItem.x) * cellWidthPx)
-                    val previewHeightPx = (gridPos.y - itemOffsetPx.y)
-                        .coerceIn(cellHeightPx, (gridSize.rows - currentItem.y) * cellHeightPx)
-                    val previewSizePx = previewWidthPx to previewHeightPx
+                    val (_, previewSizePx) = computePreviewOffsetAndSize(
+                        resizeCorner, gridPos, itemOffsetPx, currentItem,
+                        0f, 0f, 0f, cellWidthPx, cellHeightPx, gridSize
+                    )
                     onPreviewSizePxChange(previewSizePx)
                     lastPreviewSizePx = previewSizePx
                     val dragEndX = dragEndCellX.coerceIn(currentItem.x, gridSize.columns - 1)
@@ -158,199 +337,132 @@ internal object ResizeGestureHandler {
                     }
                 }
                 ResizeCorner.TopStart -> {
-                    // 드래그 시작 시점의 fixedRight/Bottom을 한 번만 캡처 (Move 후 currentItem 변경에 영향받지 않음)
-                    if (dragStartFixedRight < 0) dragStartFixedRight = currentItem.x + currentItem.spanX - 1
-                    if (dragStartFixedBottom < 0) dragStartFixedBottom = currentItem.y + currentItem.spanY - 1
-                    val fixedRight = dragStartFixedRight
-                    val fixedBottom = dragStartFixedBottom
+                    val snap = snapshotFixedEdges(
+                        resizeCorner, currentItem, cellWidthPx,
+                        dragStartFixedRight, dragStartFixedBottom, dragStartItemOffsetXPx
+                    )
+                    if (snap.newDragStartFixedRight >= 0) dragStartFixedRight = snap.newDragStartFixedRight
+                    if (snap.newDragStartFixedBottom >= 0) dragStartFixedBottom = snap.newDragStartFixedBottom
+                    val fixedRight = snap.fixedRight
+                    val fixedBottom = snap.fixedBottom
                     val fixedRightPx = (fixedRight + 1) * cellWidthPx
                     val fixedBottomPx = (fixedBottom + 1) * cellHeightPx
-                    // 최소 1셀 유지: 상한은 고정 끝 - 1셀
-                    val offsetXPx = gridPos.x.coerceIn(0f, fixedRightPx - cellWidthPx)
-                    val offsetYPx = gridPos.y.coerceIn(0f, fixedBottomPx - cellHeightPx)
-                    // 프리뷰 크기 상한: 그리드 좌/상단까지 확장 가능 (fixedRightPx / fixedBottomPx 기준)
-                    val previewWidthPx = (fixedRightPx - offsetXPx).coerceIn(
-                        cellWidthPx, fixedRightPx
+                    val (previewOffsetPx, previewSizePx) = computePreviewOffsetAndSize(
+                        resizeCorner, gridPos, itemOffsetPx, currentItem,
+                        fixedRightPx, fixedBottomPx, 0f, cellWidthPx, cellHeightPx, gridSize
                     )
-                    val previewHeightPx = (fixedBottomPx - offsetYPx).coerceIn(
-                        cellHeightPx, fixedBottomPx
-                    )
-                    val previewOffsetPx = offsetXPx to offsetYPx
-                    val previewSizePx = previewWidthPx to previewHeightPx
                     onPreviewOffsetPxChange(previewOffsetPx)
                     onPreviewSizePxChange(previewSizePx)
                     lastPreviewOffsetPx = previewOffsetPx
                     lastPreviewSizePx = previewSizePx
-                    var newX = dragEndCellX.coerceIn(0, fixedRight)
-                    var newY = dragEndCellY.coerceIn(0, fixedBottom)
-                    var newSpanX = (fixedRight - newX + 1).coerceAtLeast(1)
-                    var newSpanY = (fixedBottom - newY + 1).coerceAtLeast(1)
-                    val clampResult = ResizeSpanCalculator.clampResizeResult(
-                        newX, newY, newSpanX, newSpanY, gridSize
+                    val pos = computePositionAndSpanForCorner(
+                        resizeCorner, currentItem, dragEndCellX, dragEndCellY, dragEndCellX,
+                        fixedRight, fixedBottom, gridSize
                     )
-                    val (clampedX, clampedY) = clampResult.first
-                    val (clampedSpanX, clampedSpanY) = clampResult.second
-                    newX = clampedX
-                    newY = clampedY
-                    newSpanX = clampedSpanX
-                    newSpanY = clampedSpanY
+                    val newX = pos.newX
+                    val newY = pos.newY
+                    val newSpanX = pos.newSpanX
+                    val newSpanY = pos.newSpanY
                     onPreviewSpanChange(newSpanX to newSpanY)
                     lastDisplaySpanX = newSpanX
                     lastDisplaySpanY = newSpanY
-                    // BottomEnd와 동일하게 hysteresis 적용
                     val (targetSpanX, targetSpanY) = ResizeSpanCalculator.computeSpanWithHysteresis(
                         currentItem, newSpanX, newSpanY, lastSpanX, lastSpanY, gridSize, hysteresisCells = 1
                     )
                     lastSpanX = targetSpanX
                     lastSpanY = targetSpanY
                     if (newX == currentItem.x && newY == currentItem.y && targetSpanX == currentItem.spanX && targetSpanY == currentItem.spanY) return@detectDragGestures
-                    val moveResult = GridEngine.process(EngineRequest.move(item.id, newX, newY, items, gridSize))
-                    if (moveResult is EngineResult.Failure) {
-                        bridge.applyFailure(moveResult)
-                        return@detectDragGestures
-                    }
-                    val newItems = (moveResult as EngineResult.Success).applyTo(items)
-                    when (val resizeResult = GridEngine.process(EngineRequest.resize(item.id, targetSpanX, targetSpanY, newItems, gridSize))) {
-                        is EngineResult.Success -> {
-                            bridge.applySuccessBatched(moveResult, resizeResult, items, gridSize, item.id)
-                            lastPreviewOffsetPx = newX * cellWidthPx to newY * cellHeightPx
-                            lastPreviewSizePx = targetSpanX * cellWidthPx to targetSpanY * cellHeightPx
-                        }
-                        is EngineResult.Failure -> {
-                            bridge.applySuccess(moveResult, items, gridSize)
-                            bridge.applyFailure(resizeResult)
-                        }
-                    }
+                    val successOffsetPx = newX * cellWidthPx to newY * cellHeightPx
+                    val successSizePx = targetSpanX * cellWidthPx to targetSpanY * cellHeightPx
+                    if (!applyMoveAndResize(
+                            item.id, newX, newY, targetSpanX, targetSpanY,
+                            items, gridSize, bridge, successOffsetPx, successSizePx
+                        ) { o, s -> lastPreviewOffsetPx = o; lastPreviewSizePx = s }
+                    ) return@detectDragGestures
                 }
                 ResizeCorner.TopEnd -> {
-                    // 드래그 시작 시점의 fixedBottom을 한 번만 캡처 (Move 후 currentItem 변경에 영향받지 않음)
-                    if (dragStartFixedBottom < 0) dragStartFixedBottom = currentItem.y + currentItem.spanY - 1
-                    val fixedBottom = dragStartFixedBottom
+                    val snap = snapshotFixedEdges(
+                        resizeCorner, currentItem, cellWidthPx,
+                        dragStartFixedRight, dragStartFixedBottom, dragStartItemOffsetXPx
+                    )
+                    if (snap.newDragStartFixedBottom >= 0) dragStartFixedBottom = snap.newDragStartFixedBottom
+                    val fixedBottom = snap.fixedBottom
                     val fixedBottomPx = (fixedBottom + 1) * cellHeightPx
-                    val offsetXPx = itemOffsetPx.x
-                    // 최소 1셀 유지: 상한은 고정 끝 - 1셀
-                    val offsetYPx = gridPos.y.coerceIn(0f, fixedBottomPx - cellHeightPx)
-                    // previewWidthPx 상한: BottomEnd와 동일하게 그리드 경계 기준
-                    val previewWidthPx = (gridPos.x - itemOffsetPx.x).coerceIn(
-                        cellWidthPx, (gridSize.columns - currentItem.x) * cellWidthPx
+                    val (previewOffsetPx, previewSizePx) = computePreviewOffsetAndSize(
+                        resizeCorner, gridPos, itemOffsetPx, currentItem,
+                        0f, fixedBottomPx, 0f, cellWidthPx, cellHeightPx, gridSize
                     )
-                    // previewHeightPx 상한: 그리드 상단까지 확장 가능 (fixedBottomPx 기준)
-                    val previewHeightPx = (fixedBottomPx - offsetYPx).coerceIn(
-                        cellHeightPx, fixedBottomPx
-                    )
-                    val previewOffsetPx = offsetXPx to offsetYPx
-                    val previewSizePx = previewWidthPx to previewHeightPx
                     onPreviewOffsetPxChange(previewOffsetPx)
                     onPreviewSizePxChange(previewSizePx)
                     lastPreviewOffsetPx = previewOffsetPx
                     lastPreviewSizePx = previewSizePx
-                    val dragEndX = dragEndCellX.coerceIn(currentItem.x, gridSize.columns - 1)
-                    var newY = dragEndCellY.coerceIn(0, fixedBottom)
-                    var newSpanX = (dragEndX - currentItem.x + 1).coerceAtLeast(1)
-                    var newSpanY = (fixedBottom - newY + 1).coerceAtLeast(1)
-                    val clampResult = ResizeSpanCalculator.clampResizeResult(
-                        currentItem.x, newY, newSpanX, newSpanY, gridSize
+                    val pos = computePositionAndSpanForCorner(
+                        resizeCorner, currentItem, dragEndCellX, dragEndCellY, dragEndCellX,
+                        snap.fixedRight, fixedBottom, gridSize
                     )
-                    val (_, clampedY) = clampResult.first
-                    val (clampedSpanX, clampedSpanY) = clampResult.second
-                    newY = clampedY
-                    newSpanX = clampedSpanX
-                    newSpanY = clampedSpanY
+                    val newY = pos.newY
+                    val newSpanX = pos.newSpanX
+                    val newSpanY = pos.newSpanY
                     onPreviewSpanChange(newSpanX to newSpanY)
                     lastDisplaySpanX = newSpanX
                     lastDisplaySpanY = newSpanY
-                    // BottomEnd와 동일하게 hysteresis 적용
                     val (targetSpanX, targetSpanY) = ResizeSpanCalculator.computeSpanWithHysteresis(
                         currentItem, newSpanX, newSpanY, lastSpanX, lastSpanY, gridSize, hysteresisCells = 1
                     )
                     lastSpanX = targetSpanX
                     lastSpanY = targetSpanY
                     if (newY == currentItem.y && targetSpanX == currentItem.spanX && targetSpanY == currentItem.spanY) return@detectDragGestures
-                    val moveResult = GridEngine.process(EngineRequest.move(item.id, currentItem.x, newY, items, gridSize))
-                    if (moveResult is EngineResult.Failure) {
-                        bridge.applyFailure(moveResult)
-                        return@detectDragGestures
-                    }
-                    val newItems = (moveResult as EngineResult.Success).applyTo(items)
-                    when (val resizeResult = GridEngine.process(EngineRequest.resize(item.id, targetSpanX, targetSpanY, newItems, gridSize))) {
-                        is EngineResult.Success -> {
-                            bridge.applySuccessBatched(moveResult, resizeResult, items, gridSize, item.id)
-                            lastPreviewOffsetPx = currentItem.x * cellWidthPx to newY * cellHeightPx
-                            lastPreviewSizePx = targetSpanX * cellWidthPx to targetSpanY * cellHeightPx
-                        }
-                        is EngineResult.Failure -> {
-                            bridge.applySuccess(moveResult, items, gridSize)
-                            bridge.applyFailure(resizeResult)
-                        }
-                    }
+                    val successOffsetPx = currentItem.x * cellWidthPx to newY * cellHeightPx
+                    val successSizePx = targetSpanX * cellWidthPx to targetSpanY * cellHeightPx
+                    if (!applyMoveAndResize(
+                            item.id, currentItem.x, newY, targetSpanX, targetSpanY,
+                            items, gridSize, bridge, successOffsetPx, successSizePx
+                        ) { o, s -> lastPreviewOffsetPx = o; lastPreviewSizePx = s }
+                    ) return@detectDragGestures
                 }
                 ResizeCorner.BottomStart -> {
-                    // 드래그 시작 시점의 값을 한 번만 캡처
-                    if (dragStartFixedRight < 0) dragStartFixedRight = currentItem.x + currentItem.spanX - 1
-                    if (dragStartItemOffsetXPx < 0f) dragStartItemOffsetXPx = currentItem.x * cellWidthPx
-                    val fixedRight = dragStartFixedRight
+                    val snap = snapshotFixedEdges(
+                        resizeCorner, currentItem, cellWidthPx,
+                        dragStartFixedRight, dragStartFixedBottom, dragStartItemOffsetXPx
+                    )
+                    if (snap.newDragStartFixedRight >= 0) dragStartFixedRight = snap.newDragStartFixedRight
+                    if (snap.newDragStartItemOffsetXPx >= 0f) dragStartItemOffsetXPx = snap.newDragStartItemOffsetXPx
+                    val fixedRight = snap.fixedRight
                     val fixedRightPx = (fixedRight + 1) * cellWidthPx
-                    // X축 dragEndCell: effectiveOffsetPx 독립적으로 재계산 (Move 후 피드백 루프 차단)
-                    // 현재 터치 X + 드래그시작 아이템 offsetX = 그리드 절대 x
-                    val absGridX = change.position.x + dragStartItemOffsetXPx
+                    val absGridX = change.position.x + snap.dragStartItemOffsetXPx
                     val dragEndCellXLocal = ((absGridX - 0.5f * cellWidthPx) / cellWidthPx).toInt()
                         .coerceIn(0, gridSize.columns - 1)
-                    // 최소 1셀 유지: 상한은 고정 끝 - 1셀
-                    val offsetXPx = absGridX.coerceIn(0f, fixedRightPx - cellWidthPx)
-                    val offsetYPx = itemOffsetPx.y
-                    // previewWidthPx 상한: 그리드 좌측까지 확장 가능 (fixedRightPx 기준)
-                    val previewWidthPx = (fixedRightPx - offsetXPx).coerceIn(
-                        cellWidthPx, fixedRightPx
+                    val (previewOffsetPx, previewSizePx) = computePreviewOffsetAndSize(
+                        resizeCorner, gridPos, itemOffsetPx, currentItem,
+                        fixedRightPx, 0f, absGridX, cellWidthPx, cellHeightPx, gridSize
                     )
-                    // previewHeightPx 상한: BottomEnd와 동일하게 그리드 경계 기준
-                    val previewHeightPx = (gridPos.y - itemOffsetPx.y).coerceIn(
-                        cellHeightPx, (gridSize.rows - currentItem.y) * cellHeightPx
-                    )
-                    val previewOffsetPx = offsetXPx to offsetYPx
-                    val previewSizePx = previewWidthPx to previewHeightPx
                     onPreviewOffsetPxChange(previewOffsetPx)
                     onPreviewSizePxChange(previewSizePx)
                     lastPreviewOffsetPx = previewOffsetPx
                     lastPreviewSizePx = previewSizePx
-                    val dragEndY = dragEndCellY.coerceIn(currentItem.y, gridSize.rows - 1)
-                    var newX = dragEndCellXLocal.coerceIn(0, fixedRight)
-                    var newSpanX = (fixedRight - newX + 1).coerceAtLeast(1)
-                    var newSpanY = (dragEndY - currentItem.y + 1).coerceAtLeast(1)
-                    val clampResult = ResizeSpanCalculator.clampResizeResult(
-                        newX, currentItem.y, newSpanX, newSpanY, gridSize
+                    val pos = computePositionAndSpanForCorner(
+                        resizeCorner, currentItem, dragEndCellX, dragEndCellY, dragEndCellXLocal,
+                        fixedRight, snap.fixedBottom, gridSize
                     )
-                    val (clampedX, _) = clampResult.first
-                    val (clampedSpanX, clampedSpanY) = clampResult.second
-                    newX = clampedX
-                    newSpanX = clampedSpanX
-                    newSpanY = clampedSpanY
+                    val newX = pos.newX
+                    val newSpanX = pos.newSpanX
+                    val newSpanY = pos.newSpanY
                     onPreviewSpanChange(newSpanX to newSpanY)
                     lastDisplaySpanX = newSpanX
                     lastDisplaySpanY = newSpanY
-                    // BottomEnd와 동일하게 hysteresis 적용
                     val (targetSpanX, targetSpanY) = ResizeSpanCalculator.computeSpanWithHysteresis(
                         currentItem, newSpanX, newSpanY, lastSpanX, lastSpanY, gridSize, hysteresisCells = 1
                     )
                     lastSpanX = targetSpanX
                     lastSpanY = targetSpanY
                     if (newX == currentItem.x && targetSpanX == currentItem.spanX && targetSpanY == currentItem.spanY) return@detectDragGestures
-                    val moveResult = GridEngine.process(EngineRequest.move(item.id, newX, currentItem.y, items, gridSize))
-                    if (moveResult is EngineResult.Failure) {
-                        bridge.applyFailure(moveResult)
-                        return@detectDragGestures
-                    }
-                    val newItems = (moveResult as EngineResult.Success).applyTo(items)
-                    when (val resizeResult = GridEngine.process(EngineRequest.resize(item.id, targetSpanX, targetSpanY, newItems, gridSize))) {
-                        is EngineResult.Success -> {
-                            bridge.applySuccessBatched(moveResult, resizeResult, items, gridSize, item.id)
-                            lastPreviewOffsetPx = newX * cellWidthPx to currentItem.y * cellHeightPx
-                            lastPreviewSizePx = targetSpanX * cellWidthPx to targetSpanY * cellHeightPx
-                        }
-                        is EngineResult.Failure -> {
-                            bridge.applySuccess(moveResult, items, gridSize)
-                            bridge.applyFailure(resizeResult)
-                        }
-                    }
+                    val successOffsetPx = newX * cellWidthPx to currentItem.y * cellHeightPx
+                    val successSizePx = targetSpanX * cellWidthPx to targetSpanY * cellHeightPx
+                    if (!applyMoveAndResize(
+                            item.id, newX, currentItem.y, targetSpanX, targetSpanY,
+                            items, gridSize, bridge, successOffsetPx, successSizePx
+                        ) { o, s -> lastPreviewOffsetPx = o; lastPreviewSizePx = s }
+                    ) return@detectDragGestures
                 }
             }
         }
