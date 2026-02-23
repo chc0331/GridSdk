@@ -22,7 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.android.gridsdk.library.GridLayout
+import com.android.gridsdk.library.DynamicGridLayout
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
 import com.android.gridsdk.library.model.engine.EngineRequest
@@ -125,7 +125,7 @@ fun GridSizeChangeDemoScreen(modifier: Modifier = Modifier) {
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            GridLayout(
+            DynamicGridLayout(
                 gridSize = gridSize,
                 items = items,
                 onItemsChange = { newItems ->

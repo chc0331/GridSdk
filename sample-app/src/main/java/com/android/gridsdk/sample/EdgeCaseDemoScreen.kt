@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.android.gridsdk.library.GridLayout
+import com.android.gridsdk.library.DynamicGridLayout
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
 import com.android.gridsdk.library.model.engine.EngineRequest
@@ -100,7 +100,7 @@ private fun NoFeasibleLayoutSection(modifier: Modifier = Modifier) {
                 .height(200.dp)
                 .padding(vertical = 8.dp)
         ) {
-            GridLayout(
+            DynamicGridLayout(
                     gridSize = gridSize,
                     items = items,
                     onItemsChange = { items.clear(); items.addAll(it) },
@@ -149,7 +149,7 @@ private fun RollbackSection(modifier: Modifier = Modifier) {
                 .height(180.dp)
                 .padding(vertical = 8.dp)
         ) {
-            GridLayout(
+            DynamicGridLayout(
                 gridSize = gridSize,
                 items = items,
                 onItemsChange = { items.clear(); items.addAll(it) },

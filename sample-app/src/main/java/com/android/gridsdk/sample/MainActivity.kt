@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.android.gridsdk.library.GridLayout
+import com.android.gridsdk.library.DynamicGridLayout
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
 import com.android.gridsdk.library.model.engine.EngineRequest
@@ -177,7 +177,7 @@ fun GridDemoScreen(modifier: Modifier = Modifier) {
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            GridLayout(
+            DynamicGridLayout(
                 gridSize = gridSize,
                 items = items,
                 onItemsChange = { newItems ->
@@ -249,7 +249,7 @@ fun GridDemoPreview() {
             )
         }
         Box(modifier = Modifier.fillMaxSize()) {
-            GridLayout(
+            DynamicGridLayout(
                 gridSize = gridSize,
                 items = items,
                 onItemsChange = { items.clear(); items.addAll(it) },

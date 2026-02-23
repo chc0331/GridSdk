@@ -11,7 +11,7 @@ import com.android.gridsdk.library.internal.InternalApi
  * - BottomEnd: 우하단 핸들 (수평: left 고정, 수직: top 고정)
  */
 @InternalApi
-internal enum class ResizeCorner {
+enum class ResizeCorner {
     TopStart,
     TopEnd,
     BottomStart,

@@ -26,16 +26,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.unit.Dp
 import com.android.gridsdk.library.internal.ui.DragGestureHandler.dragGesture
 import com.android.gridsdk.library.internal.ui.ResizeGestureHandler.resizeHandleGesture
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.android.gridsdk.library.internal.InternalApi
 import com.android.gridsdk.library.internal.util.ResizeCorner
+import com.android.gridsdk.library.internal.util.toPx
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
 import kotlin.math.roundToInt
@@ -59,8 +62,8 @@ internal fun GridLayoutContent(
     gridSize: GridSize,
     items: List<GridItem>,
     onItemsChange: (List<GridItem>) -> Unit,
-    cellWidthPx: Float,
-    cellHeightPx: Float,
+    cellWidth: Dp,
+    cellHeight: Dp,
     onFailure: ((com.android.gridsdk.library.model.GridError) -> Unit)?,
     cellContent: @Composable (GridItem) -> Unit
 ) {
@@ -93,8 +96,8 @@ internal fun GridLayoutContent(
                     item = item,
                     items = items,
                     gridSize = gridSize,
-                    cellWidthPx = cellWidthPx,
-                    cellHeightPx = cellHeightPx,
+                    cellWidth = cellWidth,
+                    cellHeight = cellHeight,
                     bridge = bridge,
                     cellContent = cellContent,
                     resizeModeItemId = resizeModeItemId,
@@ -123,8 +126,8 @@ internal fun GridLayoutContent(
                     resizePreviewOffsetPx = resizePreviewOffsetPx,
                     items = items,
                     gridSize = gridSize,
-                    cellWidthPx = cellWidthPx,
-                    cellHeightPx = cellHeightPx,
+                    cellWidth = cellWidth,
+                    cellHeight = cellHeight,
                     cornerHandleSizePx = cornerHandleSizePx,
                     bridge = bridge,
                     onPreviewSpanChange = { span ->
@@ -153,17 +156,17 @@ private fun GridItemCell(
     item: GridItem,
     items: List<GridItem>,
     gridSize: GridSize,
-    cellWidthPx: Float,
-    cellHeightPx: Float,
+    cellWidth: Dp,
+    cellHeight: Dp,
     bridge: EngineStateBridge,
     cellContent: @Composable (GridItem) -> Unit,
     resizeModeItemId: String?,
     onShowResizeHandle: (String) -> Unit,
     onClearResizeMode: () -> Unit
 ) {
-    val offsetXPx = item.x * cellWidthPx
-    val offsetYPx = item.y * cellHeightPx
-    val (widthPx, heightPx) = item.spanX * cellWidthPx to item.spanY * cellHeightPx
+    val offsetXPx = item.x * (cellWidth.toPx())
+    val offsetYPx = item.y * cellHeight.toPx()
+    val (widthPx, heightPx) = (item.spanX * cellWidth.toPx()) to (item.spanY * cellHeight.toPx())
     val animatedOffsetX by animateFloatAsState(
         targetValue = offsetXPx,
         animationSpec = tween(durationMillis = 200),
@@ -203,8 +206,8 @@ private fun GridItemCell(
                 item = item,
                 items = items,
                 gridSize = gridSize,
-                cellWidthPx = cellWidthPx,
-                cellHeightPx = cellHeightPx,
+                cellWidthPx = cellWidth.toPx(),
+                cellHeightPx = cellHeight.toPx(),
                 bridge = bridge
             )
             .then(
