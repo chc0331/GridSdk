@@ -112,8 +112,8 @@ fun GridDemoScreen(modifier: Modifier = Modifier) {
                             id = "item_${nextId++}",
                             x = 0,
                             y = 0,
-                            spanX = 1,
-                            spanY = 1
+                            spanX = 2,
+                            spanY = 2
                         )
                         val result = GridEngine.process(
                             EngineRequest.Add(item, items.toList(), gridSize)

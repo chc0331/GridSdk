@@ -1,31 +1,19 @@
 package com.android.gridsdk.library.internal.resize
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.android.gridsdk.library.model.GridItem
 import kotlin.math.max
 
 class BottomEndStrategy(
-    private val initialSize: DpSize,
-    private val initialSpanX: Int,
-    private val initialSpanY: Int,
-    private val cellWidth: Dp,
-    private val cellHeight: Dp,
-) : ResizeStrategy {
-
-    var spanX by mutableIntStateOf(initialSpanX)
-    var spanY by mutableIntStateOf(initialSpanY)
-
-    var dragStartOffset by mutableStateOf(Offset.Zero)
-    var dragOffset by mutableStateOf(Offset.Zero)
-
-    var rawSize by mutableStateOf(initialSize)
-    var contentSize by mutableStateOf(initialSize)
+    val initialSize: DpSize,
+    val initialSpanX: Int,
+    val initialSpanY: Int,
+    val cellWidth: Dp,
+    val cellHeight: Dp,
+) : ResizeStrategy(initialSize, initialSpanX, initialSpanY, cellWidth, cellHeight) {
 
     override fun onResizeStart(offset: Offset) {
         dragStartOffset = offset
@@ -33,10 +21,11 @@ class BottomEndStrategy(
     }
 
     override fun onResize(
+        item: GridItem,
         deltaW: Dp,
         deltaH: Dp,
         dragAmount: Offset,
-        onContentUpdate: (Int, Int) -> Unit
+        onContentUpdate: (Int, Int, Int, Int) -> Unit
     ) {
         dragOffset += Offset(dragAmount.x, dragAmount.y)
 
@@ -85,7 +74,7 @@ class BottomEndStrategy(
                 (spanY * cellHeight.value).dp
             )
             contentSize = updateContentSize
-            onContentUpdate(spanX, spanY)
+            onContentUpdate(spanX, spanY, item.x, item.y)
         }
     }
 

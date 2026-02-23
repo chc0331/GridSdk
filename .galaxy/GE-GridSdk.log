@@ -1,9 +1,9 @@
-[2026-02-23 13:23:38] [L] galaxy property is null or empty 
-[2026-02-23 13:23:38] [L] Non-GB Project : GridSdk 
-[2026-02-23 13:23:38] [L] allprojects : project : grid-sdk 
-[2026-02-23 13:23:38] [L] Non-GB Project : grid-sdk 
-[2026-02-23 13:23:38] [L] allprojects : project : sample-app 
-[2026-02-23 13:23:38] [L] Non-GB Project : sample-app 
-[2026-02-23 13:23:38] [D] gradle projects loaded 
-[2026-02-23 13:23:38] [L] Maven repo base URL : null 
-[2026-02-23 13:23:38] [D] gradle projects evaluated 
+[2026-02-23 19:16:49] [L] galaxy property is null or empty 
+[2026-02-23 19:16:49] [L] Non-GB Project : GridSdk 
+[2026-02-23 19:16:49] [L] allprojects : project : grid-sdk 
+[2026-02-23 19:16:49] [L] Non-GB Project : grid-sdk 
+[2026-02-23 19:16:49] [L] allprojects : project : sample-app 
+[2026-02-23 19:16:49] [L] Non-GB Project : sample-app 
+[2026-02-23 19:16:49] [D] gradle projects loaded 
+[2026-02-23 19:16:49] [L] Maven repo base URL : null 
+[2026-02-23 19:16:50] [D] gradle projects evaluated 

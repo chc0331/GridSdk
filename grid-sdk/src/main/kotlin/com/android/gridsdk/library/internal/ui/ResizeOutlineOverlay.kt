@@ -71,7 +71,12 @@ internal fun ResizeOutlineOverlay(
                 strategy.onResizeStart(offset)
             },
             onResize = { deltaW, deltaH, dragAmount ->
-                strategy.onResize(deltaW, deltaH, dragAmount) { spanX, spanY ->
+                strategy.onResize(
+                    item,
+                    deltaW,
+                    deltaH,
+                    dragAmount
+                ) { spanX, spanY, offsetX, offsetY ->
 
                 }
                 true
