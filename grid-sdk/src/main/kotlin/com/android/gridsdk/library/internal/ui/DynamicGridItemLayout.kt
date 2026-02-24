@@ -1,5 +1,6 @@
 package com.android.gridsdk.library.internal.ui
 
+import android.util.Log
 import androidx.compose.animation.core.animateSizeAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.android.gridsdk.library.gridItemData
 import com.android.gridsdk.library.internal.resize.BottomEndStrategy
 import com.android.gridsdk.library.internal.resize.ResizeStrategy
+import com.android.gridsdk.library.internal.resize.TopEndStrategy
 import com.android.gridsdk.library.internal.util.ResizeCorner
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
@@ -91,7 +93,21 @@ private fun DynamicResizeItemLayout(
     onUpdateItem: (Dp, Dp, GridItem) -> Unit
 ) {
     // 1. declare strategy
-    val strategy = remember {
+    var topEndHandlerShow by remember { mutableStateOf(true) }
+    var bottomEndHandlerShow by remember { mutableStateOf(true) }
+    var topStartHandlerShow by remember { mutableStateOf(true) }
+    var bottomStartHandlerShow by remember { mutableStateOf(true) }
+
+    val topEndStrategy = remember {
+        TopEndStrategy(
+            initialSize = DpSize(itemWidth, itemHeight),
+            initialSpanX = item.spanX,
+            initialSpanY = item.spanY,
+            cellWidth = cellWidth,
+            cellHeight = cellHeight
+        )
+    }
+    val bottomEndStrategy = remember {
         BottomEndStrategy(
             initialSize = DpSize(itemWidth, itemHeight),
             initialSpanX = item.spanX,
@@ -101,58 +117,66 @@ private fun DynamicResizeItemLayout(
         )
     }
 
-    Box(
-        modifier = Modifier
-            .size(strategy.rawSize)
-    ) {
+    Log.i("heec.choi", "Handler show : $topEndHandlerShow $bottomEndHandlerShow")
+
+    if (topEndHandlerShow) {
         ResizeHandler(
-            type = ResizeCorner.BottomEnd,
-            size = strategy.rawSize,
-            onResizeStart = { offset ->
-                strategy.onResizeStart(offset)
-            },
-            onResize = { deltaW, deltaH, dragAmount ->
-                strategy.onResize(
-                    item,
-                    deltaW,
-                    deltaH,
-                    dragAmount
-                ) { spanX, spanY, offsetX, offsetY ->
-                    val nextWidth = cellWidth * spanX
-                    val nextHeight = cellHeight * spanY
-                    onUpdateItem(
-                        nextWidth, nextHeight, item.copy(
-                            spanX = spanX, spanY = spanY,
-                            x = offsetX, y = offsetY
-                        )
-                    )
-                }
-                true
+            item = item,
+            type = ResizeCorner.TopEnd,
+            strategy = topEndStrategy,
+            cellWidth = cellWidth,
+            cellHeight = cellHeight,
+            onResizeStart = {
+                topEndHandlerShow = true
+                bottomEndHandlerShow = false
             },
             onResizeEnd = {
-                strategy.onResizeEnd { spanX, spanY ->
+                topEndHandlerShow = false
+                bottomEndHandlerShow = false
+            },
+            onUpdateItem = onUpdateItem
+        )
+    }
 
-                }
-            }
+    if (bottomEndHandlerShow) {
+        ResizeHandler(
+            item = item,
+            type = ResizeCorner.BottomEnd,
+            strategy = bottomEndStrategy,
+            cellWidth = cellWidth,
+            cellHeight = cellHeight,
+            onResizeStart = {
+                topEndHandlerShow = false
+                bottomEndHandlerShow = true
+            },
+            onResizeEnd = {
+                topEndHandlerShow = false
+                bottomEndHandlerShow = false
+            },
+            onUpdateItem = onUpdateItem
         )
     }
 }
 
 @Composable
-private fun BottomEndHandler(
+private fun ResizeHandler(
     item: GridItem,
+    type: ResizeCorner,
     strategy: ResizeStrategy,
     cellWidth: Dp, cellHeight: Dp,
-    onUpdateItem: (Dp, Dp) -> Unit
+    onResizeStart: () -> Unit,
+    onResizeEnd: () -> Unit,
+    onUpdateItem: (Dp, Dp, GridItem) -> Unit
 ) {
     Box(
         modifier = Modifier
             .size(strategy.rawSize)
     ) {
         ResizeHandler(
-            type = ResizeCorner.BottomEnd,
+            type = type,
             size = strategy.rawSize,
             onResizeStart = { offset ->
+                onResizeStart()
                 strategy.onResizeStart(offset)
             },
             onResize = { deltaW, deltaH, dragAmount ->
@@ -164,11 +188,12 @@ private fun BottomEndHandler(
                 ) { spanX, spanY, offsetX, offsetY ->
                     val nextWidth = cellWidth * spanX
                     val nextHeight = cellHeight * spanY
-                    onUpdateItem(nextWidth, nextHeight)
+                    onUpdateItem(nextWidth, nextHeight, item)
                 }
                 true
             },
             onResizeEnd = {
+                onResizeEnd()
                 strategy.onResizeEnd { spanX, spanY ->
 
                 }

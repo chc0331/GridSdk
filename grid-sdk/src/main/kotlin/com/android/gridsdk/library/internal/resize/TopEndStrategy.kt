@@ -25,6 +25,12 @@ class TopEndStrategy(
         dragAmount: Offset,
         onContentUpdate: (Int, Int, Int, Int) -> Unit
     ) {
+        dragOffset += Offset(dragAmount.x, dragAmount.y)
+
+        val currentRawSize = rawSize
+        val nextRawSize = DpSize(currentRawSize.width + deltaW, currentRawSize.height + deltaH)
+        rawSize = nextRawSize
+
 
     }
 
