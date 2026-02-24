@@ -1,17 +1,12 @@
 package com.android.gridsdk.library.internal.ui
 
-import android.util.Log
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateSizeAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,6 +32,7 @@ internal fun DynamicGridItemLayout(
     isResizeMode: Boolean,
     onLongPressed: (String) -> Unit,
     onTap: (String) -> Unit,
+    onItemChanged: (GridItem) -> Unit,
     modifier: Modifier = Modifier,
     cellContent: @Composable (GridItem) -> Unit
 ) {
@@ -78,6 +74,7 @@ internal fun DynamicGridItemLayout(
                     itemWidth = width
                     itemHeight = height
                     currentItem = updateItem
+                    onItemChanged(updateItem)
                 }
             )
         }

@@ -1,8 +1,134 @@
 package com.android.gridsdk.library.internal.state
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.android.gridsdk.library.internal.InternalApi
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
+
+@Composable
+internal fun rememberOccupancyState(gridSize: GridSize): OccupancyState {
+    return remember(gridSize) {
+        OccupancyState(gridSize)
+    }
+}
+
+internal class OccupancyState(gridSize: GridSize) {
+    var currentGridSize: GridSize
+    var occupancyMap by mutableStateOf<Array<Array<String?>>?>(null)
+        private set
+
+    init {
+        currentGridSize = gridSize
+        updateGridSize(gridSize)
+    }
+
+    fun updateGridSize(gridSize: GridSize) {
+        currentGridSize = gridSize
+        occupancyMap = Array(gridSize.rows) { Array(gridSize.columns) { null } }
+    }
+
+    fun updateGridItem(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
+        remove(id)
+        place(id, x, y, spanX, spanY)
+    }
+
+    fun place(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
+        (x until x + spanX).forEach { i ->
+            (y until y + spanY).forEach { j ->
+                occupancyMap?.get(j)[i] = id
+            }
+        }
+    }
+
+    fun isEmpty(x: Int, y: Int): Boolean {
+        if (!isValidCell(x, y)) return false
+        return occupancyMap?.get(y)[x] == null
+    }
+
+    fun getOccupant(x: Int, y: Int): String? {
+        if (!isValidCell(x, y)) return null
+        return occupancyMap?.get(y)[x]
+    }
+
+    fun findAddPosition(spanX: Int, spanY: Int): Pair<Int, Int>? {
+        // find top left empty position
+        (0 until currentGridSize.rows).forEach { y ->
+            (0 until currentGridSize.columns).forEach { x ->
+                if (isValidCell(x + spanX - 1, y + spanY - 1) &&
+                    isAreaEmpty(x, y, spanX, spanY)
+                ) {
+                    return x to y
+                }
+            }
+        }
+        return null
+    }
+
+    fun findPosition(id: String): Pair<Int, Int>? {
+        (0 until currentGridSize.columns).forEach { x ->
+            (0 until currentGridSize.rows).forEach { y ->
+                if (occupancyMap?.get(y)[x] == id) return x to y
+            }
+        }
+        return null
+    }
+
+    fun checkIdExist(id: String): Boolean {
+        (0 until currentGridSize.rows).forEach { y ->
+            (0 until currentGridSize.columns).forEach { x ->
+                if (occupancyMap?.get(y)[x] == id) return true
+            }
+        }
+        return false
+    }
+
+    fun remove(id: String) {
+        (0 until currentGridSize.rows).forEach { y ->
+            (0 until currentGridSize.columns).forEach { x ->
+                if (occupancyMap?.get(y)[x] == id)
+                    occupancyMap?.get(y)[x] = null
+            }
+        }
+    }
+
+    fun clear() {
+        (0 until currentGridSize.rows).forEach { y ->
+            (0 until currentGridSize.columns).forEach { x ->
+                occupancyMap?.get(y)[x] = null
+            }
+        }
+    }
+
+    private fun isValidCell(x: Int, y: Int): Boolean {
+        return x >= 0 && x < currentGridSize.columns && y >= 0 && y < currentGridSize.rows
+    }
+
+    private fun isAreaEmpty(x: Int, y: Int, spanX: Int, spanY: Int): Boolean {
+        (x until x + spanX).forEach { i ->
+            (y until y + spanY).forEach { j ->
+                if (occupancyMap?.get(j)[i] != null) return false
+            }
+        }
+        return true
+    }
+
+    override fun toString(): String {
+        return buildString {
+            appendLine("OccupancyGrid(${currentGridSize.columns}x${currentGridSize.rows}):")
+            (0 until currentGridSize.rows).forEach { y ->
+                (0 until currentGridSize.columns).forEach { x ->
+                    append(occupancyMap?.get(y)[x])
+                    append(" ")
+                }
+                appendLine()
+            }
+        }
+    }
+}
 
 /**
  * 그리드 셀의 점유 상태를 추적하는 자료구조
@@ -55,8 +181,8 @@ internal class OccupancyGrid(
      * @throws IllegalStateException 배치 영역이 이미 점유되어 있는 경우
      */
     internal fun place(item: GridItem) {
-        require(isValidCell(item.x, item.y)) { 
-            "Item ${item.id} start position (${item.x}, ${item.y}) is out of bounds" 
+        require(isValidCell(item.x, item.y)) {
+            "Item ${item.id} start position (${item.x}, ${item.y}) is out of bounds"
         }
         require(item.endX <= gridSize.columns && item.endY <= gridSize.rows) {
             "Item ${item.id} exceeds grid bounds: end position (${item.endX}, ${item.endY})"

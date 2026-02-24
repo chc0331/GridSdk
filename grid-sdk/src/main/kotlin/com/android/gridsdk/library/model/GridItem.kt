@@ -10,7 +10,7 @@ package com.android.gridsdk.library.model
  * @property spanY 아이템이 차지하는 행(row) 개수
  * @throws IllegalArgumentException spanX 또는 spanY가 1보다 작은 경우
  */
-public data class GridItem(
+public data class GridItem internal constructor(
     val id: String,
     val x: Int,
     val y: Int,
@@ -107,6 +107,10 @@ public data class GridItem(
          */
         public fun single(id: String, x: Int, y: Int): GridItem {
             return GridItem(id, x, y, spanX = 1, spanY = 1)
+        }
+
+        fun create(id: String, spanX: Int, spanY: Int): GridItem {
+            return GridItem(id = id, x = 0, y = 0, spanX = spanX, spanY = spanY)
         }
     }
 }

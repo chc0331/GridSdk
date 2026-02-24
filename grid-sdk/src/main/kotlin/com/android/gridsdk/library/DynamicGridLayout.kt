@@ -1,6 +1,7 @@
 package com.android.gridsdk.library
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -17,6 +18,8 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import com.android.gridsdk.library.internal.state.OccupancyState
+import com.android.gridsdk.library.internal.state.rememberOccupancyState
 import com.android.gridsdk.library.internal.ui.DynamicGridItemLayout
 import com.android.gridsdk.library.internal.ui.LocalGridCellSize
 import com.android.gridsdk.library.model.GridError
@@ -38,7 +41,7 @@ import kotlin.math.roundToInt
  */
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
-public fun DynamicGridLayout(
+fun DynamicGridLayout(
     gridSize: GridSize,
     items: List<GridItem>,
     onItemsChange: (List<GridItem>) -> Unit,
@@ -49,6 +52,7 @@ public fun DynamicGridLayout(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val cellWidth = maxWidth / gridSize.columns
         val cellHeight = maxHeight / gridSize.rows
+        val occupancyState = rememberOccupancyState(gridSize)
 
         CompositionLocalProvider(
             LocalGridCellSize provides DpSize(cellWidth, cellHeight)
@@ -57,6 +61,7 @@ public fun DynamicGridLayout(
 
             DynamicGridLayout(
                 gridSize = gridSize,
+                occupancyState = occupancyState,
                 cellWidth = cellWidth,
                 cellHeight = cellHeight,
                 modifier = Modifier.fillMaxSize()
@@ -73,7 +78,18 @@ public fun DynamicGridLayout(
                         },
                         onTap = { id ->
                             currentResizeItemId = null
-                        }, modifier = Modifier.fillMaxSize()
+                        },
+                        onItemChanged = { item ->
+                            // todo : occupancyState를 어떻게 관리해야하나
+                            occupancyState.updateGridItem(
+                                id = item.id,
+                                x = item.x,
+                                y = item.y,
+                                spanX = item.spanX,
+                                spanY = item.spanY
+                            )
+                        },
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         cellContent(item)
                     }
@@ -86,6 +102,7 @@ public fun DynamicGridLayout(
 @Composable
 private fun DynamicGridLayout(
     gridSize: GridSize,
+    occupancyState: OccupancyState,
     cellWidth: Dp,
     cellHeight: Dp,
     modifier: Modifier = Modifier,
@@ -99,31 +116,47 @@ private fun DynamicGridLayout(
         val cellHeightPx = cellHeight.toPx()
         // Measure and place each child according to its GridItem data
         val placeables = mutableListOf<Pair<Placeable, GridItem>>()
-        // Layout dimensions
         val layoutWidth = (cellWidthPx * gridSize.columns).roundToInt()
         val layoutHeight = (cellHeightPx * gridSize.rows).roundToInt()
 
+        // measure
         measurables.forEach { measurable ->
             val gridItem = measurable.getGridItem()
             if (gridItem != null) {
                 // Calculate dimensions based on span
-                val width = (cellWidthPx * gridItem.spanX).roundToInt()
-                val height = (cellHeightPx * gridItem.spanY).roundToInt()
+                val itemWidth = (cellWidthPx * gridItem.spanX).roundToInt()
+                val itemHeight = (cellHeightPx * gridItem.spanY).roundToInt()
 
                 // Measure the child with calculated dimensions
                 val placeable = measurable.measure(
                     constraints.copy(
-                        minWidth = width,
+                        minWidth = itemWidth,
                         maxWidth = layoutWidth,
-                        minHeight = height,
+                        minHeight = itemHeight,
                         maxHeight = layoutHeight
                     )
                 )
 
-                placeables.add(Pair(placeable, gridItem))
+                // Calculate x,y
+                val findItem = occupancyState.checkIdExist(gridItem.id)
+                val position =
+                    if (!findItem) occupancyState.findAddPosition(gridItem.spanX, gridItem.spanY)
+                    else occupancyState.findPosition(gridItem.id)
+                if (position == null) return@forEach
+                val finalGridItem = gridItem.copy(x = position.first, y = position.second)
+                occupancyState.updateGridItem(
+                    finalGridItem.id,
+                    finalGridItem.x,
+                    finalGridItem.y,
+                    finalGridItem.spanX,
+                    finalGridItem.spanY
+                )
+
+                placeables.add(Pair(placeable, finalGridItem))
             }
         }
 
+        // layout
         layout(layoutWidth, layoutHeight) {
             // Place each child at its grid position
             placeables.forEach { (placeable, gridItem) ->
