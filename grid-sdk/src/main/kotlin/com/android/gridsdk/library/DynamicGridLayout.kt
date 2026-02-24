@@ -73,7 +73,7 @@ public fun DynamicGridLayout(
                         },
                         onTap = { id ->
                             currentResizeItemId = null
-                        }
+                        }, modifier = Modifier.fillMaxSize()
                     ) {
                         cellContent(item)
                     }

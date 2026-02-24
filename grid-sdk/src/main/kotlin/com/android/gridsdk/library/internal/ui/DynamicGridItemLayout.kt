@@ -1,14 +1,17 @@
 package com.android.gridsdk.library.internal.ui
 
 import android.util.Log
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateSizeAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,11 +37,13 @@ internal fun DynamicGridItemLayout(
     isResizeMode: Boolean,
     onLongPressed: (String) -> Unit,
     onTap: (String) -> Unit,
+    modifier: Modifier = Modifier,
     cellContent: @Composable (GridItem) -> Unit
 ) {
     val cellSize = LocalGridCellSize.current
     var itemWidth by remember { mutableStateOf(cellSize.width * item.spanX) }
     var itemHeight by remember { mutableStateOf(cellSize.height * item.spanY) }
+    // 상위 레이아웃이 Modifier.wrapContentSize() 일경우 Flickering 이슈 발생.
     val itemSize by animateSizeAsState(
         targetValue = Size(itemWidth.value, itemHeight.value),
         animationSpec = tween(200),
@@ -48,8 +53,7 @@ internal fun DynamicGridItemLayout(
     var currentItem by remember { mutableStateOf(item) }
 
     Box(
-        modifier = Modifier
-            .wrapContentSize()
+        modifier = modifier
             .pointerInput(item.id) {
                 detectTapGestures(
                     onLongPress = { onLongPressed(item.id) },
@@ -73,8 +77,6 @@ internal fun DynamicGridItemLayout(
                 onUpdateItem = { width, height, updateItem ->
                     itemWidth = width
                     itemHeight = height
-                    Log.i("heec.choi", "Before : $currentItem")
-                    Log.i("heec.choi", "After : $updateItem")
                     currentItem = updateItem
                 }
             )
