@@ -17,45 +17,73 @@ internal fun rememberOccupancyState(gridSize: GridSize): OccupancyState {
 }
 
 internal class OccupancyState(gridSize: GridSize) {
-    var currentGridSize: GridSize
-    var occupancyMap by mutableStateOf<Array<Array<String?>>?>(null)
+    var currentGridSize: GridSize = gridSize
         private set
 
-    init {
-        currentGridSize = gridSize
-        updateGridSize(gridSize)
-    }
+    // 내부 작업용 배열 (Compose 추적 대상 아님)
+    private var _map: Array<Array<String?>> = Array(gridSize.rows) { Array(gridSize.columns) { null } }
+
+    // Compose가 추적하는 스냅샷 - 변경 시마다 새 참조 할당
+    var occupancyMap by mutableStateOf<Array<Array<String?>>?>(
+        Array(gridSize.rows) { Array(gridSize.columns) { null } }
+    )
+        private set
 
     fun updateGridSize(gridSize: GridSize) {
         currentGridSize = gridSize
-        occupancyMap = Array(gridSize.rows) { Array(gridSize.columns) { null } }
+        _map = Array(gridSize.rows) { Array(gridSize.columns) { null } }
+        publishSnapshot()
     }
 
     fun updateGridItem(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
-        remove(id)
-        place(id, x, y, spanX, spanY)
+        removeInternal(id)
+        placeInternal(id, x, y, spanX, spanY)
+        publishSnapshot()
     }
 
     fun place(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
-        (x until x + spanX).forEach { i ->
-            (y until y + spanY).forEach { j ->
-                occupancyMap?.get(j)[i] = id
+        placeInternal(id, x, y, spanX, spanY)
+        publishSnapshot()
+    }
+
+    fun remove(id: String) {
+        removeInternal(id)
+        publishSnapshot()
+    }
+
+    fun clear() {
+        clearInternal()
+        publishSnapshot()
+    }
+
+    /**
+     * items 리스트로부터 OccupancyState를 재구축합니다.
+     * items가 외부에서 변경될 때 호출하여 동기화합니다.
+     */
+    fun syncFromItems(items: List<GridItem>) {
+        _map = Array(currentGridSize.rows) { Array(currentGridSize.columns) { null } }
+        items.forEach { item ->
+            if (isValidCell(item.x, item.y) &&
+                item.endX <= currentGridSize.columns &&
+                item.endY <= currentGridSize.rows
+            ) {
+                placeInternal(item.id, item.x, item.y, item.spanX, item.spanY)
             }
         }
+        publishSnapshot()
     }
 
     fun isEmpty(x: Int, y: Int): Boolean {
         if (!isValidCell(x, y)) return false
-        return occupancyMap?.get(y)[x] == null
+        return _map[y][x] == null
     }
 
     fun getOccupant(x: Int, y: Int): String? {
         if (!isValidCell(x, y)) return null
-        return occupancyMap?.get(y)[x]
+        return _map[y][x]
     }
 
     fun findAddPosition(spanX: Int, spanY: Int): Pair<Int, Int>? {
-        // find top left empty position
         (0 until currentGridSize.rows).forEach { y ->
             (0 until currentGridSize.columns).forEach { x ->
                 if (isValidCell(x + spanX - 1, y + spanY - 1) &&
@@ -71,7 +99,7 @@ internal class OccupancyState(gridSize: GridSize) {
     fun findPosition(id: String): Pair<Int, Int>? {
         (0 until currentGridSize.columns).forEach { x ->
             (0 until currentGridSize.rows).forEach { y ->
-                if (occupancyMap?.get(y)[x] == id) return x to y
+                if (_map[y][x] == id) return x to y
             }
         }
         return null
@@ -80,25 +108,41 @@ internal class OccupancyState(gridSize: GridSize) {
     fun checkIdExist(id: String): Boolean {
         (0 until currentGridSize.rows).forEach { y ->
             (0 until currentGridSize.columns).forEach { x ->
-                if (occupancyMap?.get(y)[x] == id) return true
+                if (_map[y][x] == id) return true
             }
         }
         return false
     }
 
-    fun remove(id: String) {
-        (0 until currentGridSize.rows).forEach { y ->
-            (0 until currentGridSize.columns).forEach { x ->
-                if (occupancyMap?.get(y)[x] == id)
-                    occupancyMap?.get(y)[x] = null
+    // 내부 배열을 새 배열로 복사하여 Compose State에 할당
+    private fun publishSnapshot() {
+        occupancyMap = _map.map { it.copyOf() }.toTypedArray()
+    }
+
+    private fun placeInternal(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
+        (x until x + spanX).forEach { i ->
+            (y until y + spanY).forEach { j ->
+                if (isValidCell(i, j)) {
+                    _map[j][i] = id
+                }
             }
         }
     }
 
-    fun clear() {
-        (0 until currentGridSize.rows).forEach { y ->
-            (0 until currentGridSize.columns).forEach { x ->
-                occupancyMap?.get(y)[x] = null
+    private fun removeInternal(id: String) {
+        for (y in _map.indices) {
+            for (x in _map[y].indices) {
+                if (_map[y][x] == id) {
+                    _map[y][x] = null
+                }
+            }
+        }
+    }
+
+    private fun clearInternal() {
+        for (y in _map.indices) {
+            for (x in _map[y].indices) {
+                _map[y][x] = null
             }
         }
     }
@@ -110,7 +154,7 @@ internal class OccupancyState(gridSize: GridSize) {
     private fun isAreaEmpty(x: Int, y: Int, spanX: Int, spanY: Int): Boolean {
         (x until x + spanX).forEach { i ->
             (y until y + spanY).forEach { j ->
-                if (occupancyMap?.get(j)[i] != null) return false
+                if (_map[j][i] != null) return false
             }
         }
         return true
@@ -121,7 +165,7 @@ internal class OccupancyState(gridSize: GridSize) {
             appendLine("OccupancyGrid(${currentGridSize.columns}x${currentGridSize.rows}):")
             (0 until currentGridSize.rows).forEach { y ->
                 (0 until currentGridSize.columns).forEach { x ->
-                    append(occupancyMap?.get(y)[x])
+                    append(_map[y][x])
                     append(" ")
                 }
                 appendLine()
