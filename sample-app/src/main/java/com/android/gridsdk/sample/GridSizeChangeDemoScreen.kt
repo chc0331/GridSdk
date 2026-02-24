@@ -36,132 +36,132 @@ fun GridSizeChangeDemoScreen(modifier: Modifier = Modifier) {
     var nextId by remember { mutableStateOf(0) }
     var lastError by remember { mutableStateOf<String?>(null) }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "N/M Runtime Change",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = "Adjust rows/columns. Shrinking removes out-of-bounds items.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Rows: ${gridSize.rows}", style = MaterialTheme.typography.labelSmall)
-                    Slider(
-                        value = gridSize.rows.toFloat(),
-                        onValueChange = { newVal ->
-                            val rows = newVal.toInt().coerceIn(2, 6)
-                            gridSize = GridSize(rows = rows, columns = gridSize.columns)
-                            items.removeAll { !it.isValidIn(gridSize) }
-                        },
-                        valueRange = 2f..6f,
-                        steps = 4
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Columns: ${gridSize.columns}", style = MaterialTheme.typography.labelSmall)
-                    Slider(
-                        value = gridSize.columns.toFloat(),
-                        onValueChange = { newVal ->
-                            val cols = newVal.toInt().coerceIn(2, 6)
-                            gridSize = GridSize(rows = gridSize.rows, columns = cols)
-                            items.removeAll { !it.isValidIn(gridSize) }
-                        },
-                        valueRange = 2f..6f,
-                        steps = 4
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        val item = GridItem(
-                            id = "item_${nextId++}",
-                            x = 0,
-                            y = 0,
-                            spanX = 1,
-                            spanY = 1
-                        )
-                        val result = GridEngine.process(
-                            EngineRequest.Add(item, items.toList(), gridSize)
-                        )
-                        when (result) {
-                            is EngineResult.Success -> {
-                                val newItems = result.applyTo(items.toList())
-                                items.clear()
-                                items.addAll(newItems)
-                                lastError = null
-                            }
-                            is EngineResult.Failure -> lastError = result.error.toString()
-                        }
-                    }
-                ) {
-                    Text("Add")
-                }
-                lastError?.let { err ->
-                    Text(
-                        text = err,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                }
-            }
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            DynamicGridLayout(
-                gridSize = gridSize,
-                items = items,
-                onItemsChange = { newItems ->
-                    items.clear()
-                    items.addAll(newItems)
-                },
-                modifier = Modifier.fillMaxSize(),
-                onFailure = { lastError = it.toString() },
-                cellContent = { item ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(2.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .border(1.dp, MaterialTheme.colorScheme.outline),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(item.id, style = MaterialTheme.typography.labelMedium)
-                            Text(
-                                "${item.spanX}x${item.spanY}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Button(
-                                onClick = { items.removeAll { it.id == item.id } },
-                                modifier = Modifier.padding(4.dp)
-                            ) {
-                                Text("Del")
-                            }
-                        }
-                    }
-                }
-            )
-        }
-    }
+//    Column(modifier = modifier.fillMaxSize()) {
+//        Column(modifier = Modifier.padding(16.dp)) {
+//            Text(
+//                text = "N/M Runtime Change",
+//                style = MaterialTheme.typography.titleMedium
+//            )
+//            Text(
+//                text = "Adjust rows/columns. Shrinking removes out-of-bounds items.",
+//                style = MaterialTheme.typography.bodySmall,
+//                color = MaterialTheme.colorScheme.onSurfaceVariant
+//            )
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(vertical = 8.dp),
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.spacedBy(16.dp)
+//            ) {
+//                Column(modifier = Modifier.weight(1f)) {
+//                    Text("Rows: ${gridSize.rows}", style = MaterialTheme.typography.labelSmall)
+//                    Slider(
+//                        value = gridSize.rows.toFloat(),
+//                        onValueChange = { newVal ->
+//                            val rows = newVal.toInt().coerceIn(2, 6)
+//                            gridSize = GridSize(rows = rows, columns = gridSize.columns)
+//                            items.removeAll { !it.isValidIn(gridSize) }
+//                        },
+//                        valueRange = 2f..6f,
+//                        steps = 4
+//                    )
+//                }
+//                Column(modifier = Modifier.weight(1f)) {
+//                    Text("Columns: ${gridSize.columns}", style = MaterialTheme.typography.labelSmall)
+//                    Slider(
+//                        value = gridSize.columns.toFloat(),
+//                        onValueChange = { newVal ->
+//                            val cols = newVal.toInt().coerceIn(2, 6)
+//                            gridSize = GridSize(rows = gridSize.rows, columns = cols)
+//                            items.removeAll { !it.isValidIn(gridSize) }
+//                        },
+//                        valueRange = 2f..6f,
+//                        steps = 4
+//                    )
+//                }
+//            }
+//            Row(
+//                modifier = Modifier.padding(vertical = 4.dp),
+//                horizontalArrangement = Arrangement.spacedBy(8.dp)
+//            ) {
+//                Button(
+//                    onClick = {
+//                        val item = GridItem(
+//                            id = "item_${nextId++}",
+//                            x = 0,
+//                            y = 0,
+//                            spanX = 1,
+//                            spanY = 1
+//                        )
+//                        val result = GridEngine.process(
+//                            EngineRequest.Add(item, items.toList(), gridSize)
+//                        )
+//                        when (result) {
+//                            is EngineResult.Success -> {
+//                                val newItems = result.applyTo(items.toList())
+//                                items.clear()
+//                                items.addAll(newItems)
+//                                lastError = null
+//                            }
+//                            is EngineResult.Failure -> lastError = result.error.toString()
+//                        }
+//                    }
+//                ) {
+//                    Text("Add")
+//                }
+//                lastError?.let { err ->
+//                    Text(
+//                        text = err,
+//                        color = MaterialTheme.colorScheme.error,
+//                        style = MaterialTheme.typography.bodySmall,
+//                        modifier = Modifier.align(Alignment.CenterVertically)
+//                    )
+//                }
+//            }
+//        }
+//        Box(
+//            modifier = Modifier
+//                .weight(1f)
+//                .fillMaxWidth()
+//        ) {
+//            DynamicGridLayout(
+//                gridSize = gridSize,
+//                items = items,
+//                onItemsChange = { newItems ->
+//                    items.clear()
+//                    items.addAll(newItems)
+//                },
+//                modifier = Modifier.fillMaxSize(),
+//                onFailure = { lastError = it.toString() },
+//                cellContent = { item ->
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxSize()
+//                            .padding(2.dp)
+//                            .background(MaterialTheme.colorScheme.primaryContainer)
+//                            .border(1.dp, MaterialTheme.colorScheme.outline),
+//                        contentAlignment = Alignment.Center
+//                    ) {
+//                        Column(
+//                            horizontalAlignment = Alignment.CenterHorizontally,
+//                            verticalArrangement = Arrangement.Center
+//                        ) {
+//                            Text(item.id, style = MaterialTheme.typography.labelMedium)
+//                            Text(
+//                                "${item.spanX}x${item.spanY}",
+//                                style = MaterialTheme.typography.bodySmall
+//                            )
+//                            Button(
+//                                onClick = { items.removeAll { it.id == item.id } },
+//                                modifier = Modifier.padding(4.dp)
+//                            ) {
+//                                Text("Del")
+//                            }
+//                        }
+//                    }
+//                }
+//            )
+//        }
+//    }
 }

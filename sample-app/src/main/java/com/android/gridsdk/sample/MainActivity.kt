@@ -108,10 +108,8 @@ fun GridDemoScreen(modifier: Modifier = Modifier) {
             ) {
                 Button(
                     onClick = {
-                        val item = GridItem(
+                        val item = GridItem.create(
                             id = "item_${nextId++}",
-                            x = 0,
-                            y = 0,
                             spanX = 2,
                             spanY = 2
                         )
@@ -137,10 +135,8 @@ fun GridDemoScreen(modifier: Modifier = Modifier) {
                     onClick = {
                         lastError = null
                         while (true) {
-                            val item = GridItem(
+                            val item = GridItem.create(
                                 id = "item_${nextId++}",
-                                x = 0,
-                                y = 0,
                                 spanX = 1,
                                 spanY = 1
                             )
