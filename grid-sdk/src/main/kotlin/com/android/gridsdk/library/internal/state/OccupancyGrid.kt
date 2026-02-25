@@ -1,5 +1,6 @@
 package com.android.gridsdk.library.internal.state
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,12 +17,33 @@ internal fun rememberOccupancyState(gridSize: GridSize): OccupancyState {
     }
 }
 
+/**
+ * * todo : Occupancy
+ *  * GridSize의 columns(가로) x rows(세로) 그리드 배열의 상태를 표시 하는 상태 클래스.
+ *  *
+ *  * ex 1) GridSize(4,4)
+ *  *
+ *  * Add item_0 (id="item_0",x=0,y=0,spanX=2,spanY=2)
+ *  * =>
+ *  * item_0 item_0 null null
+ *  * item_0 item_0 null null
+ *  * null null null null
+ *  * null null null null
+ *  *
+ *  * Add item_1 (id="item_1",x=2,y=0,spanX=2,spanY=2)
+ *  * =>
+ *  * item_0 item_0 item_1 item_1
+ *  * item_0 item_0 item_1 item_1
+ *  * null null null null
+ *  * null null null null
+ * */
 internal class OccupancyState(gridSize: GridSize) {
     var currentGridSize: GridSize = gridSize
         private set
 
     // 내부 작업용 배열 (Compose 추적 대상 아님)
-    private var _map: Array<Array<String?>> = Array(gridSize.rows) { Array(gridSize.columns) { null } }
+    private var _map: Array<Array<String?>> =
+        Array(gridSize.rows) { Array(gridSize.columns) { null } }
 
     // Compose가 추적하는 스냅샷 - 변경 시마다 새 참조 할당
     var occupancyMap by mutableStateOf<Array<Array<String?>>?>(
@@ -32,28 +54,23 @@ internal class OccupancyState(gridSize: GridSize) {
     fun updateGridSize(gridSize: GridSize) {
         currentGridSize = gridSize
         _map = Array(gridSize.rows) { Array(gridSize.columns) { null } }
-        publishSnapshot()
     }
 
     fun updateGridItem(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
         removeInternal(id)
         placeInternal(id, x, y, spanX, spanY)
-        publishSnapshot()
     }
 
     fun place(id: String, x: Int, y: Int, spanX: Int, spanY: Int) {
         placeInternal(id, x, y, spanX, spanY)
-        publishSnapshot()
     }
 
     fun remove(id: String) {
         removeInternal(id)
-        publishSnapshot()
     }
 
     fun clear() {
         clearInternal()
-        publishSnapshot()
     }
 
     /**
@@ -61,16 +78,35 @@ internal class OccupancyState(gridSize: GridSize) {
      * items가 외부에서 변경될 때 호출하여 동기화합니다.
      */
     fun syncFromItems(items: List<GridItem>) {
+        // 1. items중 map에 이미 저장되어 있는 아이템 정보 가져오기.
+        val existItem = items.filter { findPosition(it.id) != null }
+        // 2. 추가되어야 하는 items 가져오기.
+        val excludeExistItem = items.minus(existItem)
+        // 3. _map의 임시 데이터 저장.
+        val tempMap = _map
         _map = Array(currentGridSize.rows) { Array(currentGridSize.columns) { null } }
-        items.forEach { item ->
-            if (isValidCell(item.x, item.y) &&
-                item.endX <= currentGridSize.columns &&
-                item.endY <= currentGridSize.rows
-            ) {
-                placeInternal(item.id, item.x, item.y, item.spanX, item.spanY)
+
+        // 4. 기존 item들의(excludeItem) state map을 업데이트
+        val existItemIdSet = existItem.map { it.id }.toSet()
+        (0 until currentGridSize.columns).forEach { x ->
+            (0 until currentGridSize.rows).forEach { y ->
+                if (tempMap[y][x] != null && existItemIdSet.contains(tempMap[y][x])) {
+                    _map[y][x] = tempMap[y][x]
+                }
             }
         }
-        publishSnapshot()
+        // 5. 새로운 아이템들의 state map을 업데이트
+        excludeExistItem.forEach {
+            val position = findAddPosition(it.spanX, it.spanY)
+            if (position == null) return@forEach
+            placeInternal(
+                id = it.id,
+                x = position.first,
+                y = position.second,
+                spanX = it.spanX,
+                spanY = it.spanY
+            )
+        }
     }
 
     fun isEmpty(x: Int, y: Int): Boolean {
@@ -81,6 +117,30 @@ internal class OccupancyState(gridSize: GridSize) {
     fun getOccupant(x: Int, y: Int): String? {
         if (!isValidCell(x, y)) return null
         return _map[y][x]
+    }
+
+    fun getSpan(id: String): Pair<Int, Int>? {
+        var minX = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var minY = Int.MAX_VALUE
+        var maxY = Int.MIN_VALUE
+
+        (0 until currentGridSize.columns).forEach { x ->
+            (0 until currentGridSize.rows).forEach { y ->
+                if (_map[y][x] == id) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                }
+            }
+        }
+
+        if (minX == Int.MAX_VALUE) return null
+        val spanX = maxX - minX + 1
+        val spanY = maxY - minY + 1
+
+        return spanX to spanY
     }
 
     fun findAddPosition(spanX: Int, spanY: Int): Pair<Int, Int>? {
@@ -115,7 +175,7 @@ internal class OccupancyState(gridSize: GridSize) {
     }
 
     // 내부 배열을 새 배열로 복사하여 Compose State에 할당
-    private fun publishSnapshot() {
+    fun publish() {
         occupancyMap = _map.map { it.copyOf() }.toTypedArray()
     }
 

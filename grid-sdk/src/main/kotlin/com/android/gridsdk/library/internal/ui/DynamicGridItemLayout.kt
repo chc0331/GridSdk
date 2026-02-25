@@ -1,6 +1,5 @@
 package com.android.gridsdk.library.internal.ui
 
-import android.util.Log
 import androidx.compose.animation.core.animateSizeAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -117,8 +116,6 @@ private fun DynamicResizeItemLayout(
         )
     }
 
-    Log.i("heec.choi", "Handler show : $topEndHandlerShow $bottomEndHandlerShow")
-
     if (topEndHandlerShow) {
         ResizeHandler(
             item = item,
@@ -188,7 +185,7 @@ private fun ResizeHandler(
                 ) { spanX, spanY, offsetX, offsetY ->
                     val nextWidth = cellWidth * spanX
                     val nextHeight = cellHeight * spanY
-                    onUpdateItem(nextWidth, nextHeight, item)
+                    onUpdateItem(nextWidth, nextHeight, item.copy(spanX = spanX, spanY = spanY))
                 }
                 true
             },

@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
@@ -26,6 +27,7 @@ import com.android.gridsdk.library.internal.ui.LocalGridCellSize
 import com.android.gridsdk.library.model.GridError
 import com.android.gridsdk.library.model.GridItem
 import com.android.gridsdk.library.model.GridSize
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 
 
@@ -54,10 +56,19 @@ private fun resolveUnpositionedItems(
         } else {
             occupancyState.findPosition(item.id)
         }
-        
+
         if (position == null) return@mapNotNull null
-        
-        val resolved = item.copy(x = position.first, y = position.second)
+
+        val resolved = if (exists) {
+            val span = occupancyState.getSpan(item.id)
+            if (span == null) return@mapNotNull null
+            item.copy(
+                spanX = span.first,
+                spanY = span.second,
+                x = position.first,
+                y = position.second
+            )
+        } else item.copy(x = position.first, y = position.second)
         // occupancyState에 배치 정보 등록 (Composition phase에서 실행)
         occupancyState.updateGridItem(
             resolved.id,
@@ -98,12 +109,20 @@ fun DynamicGridLayout(
         val occupancyState = rememberOccupancyState(gridSize)
 
         // Composition phase: items가 변경되면 occupancyState를 동기화
-        LaunchedEffect(items, gridSize) {
-            occupancyState.syncFromItems(items)
+        LaunchedEffect(Unit) {
+            snapshotFlow { items.toList() to gridSize }
+                .distinctUntilChanged()
+                .collect { (latestItems, gridSize) ->
+                    if (occupancyState.currentGridSize != gridSize) {
+                        occupancyState.updateGridSize(gridSize)
+                    }
+                    occupancyState.syncFromItems(latestItems)
+                    occupancyState.publish()
+                }
         }
 
         // Composition phase: 위치가 없는 아이템의 auto-placement 수행
-        val resolvedItems = remember(items, gridSize, occupancyState.occupancyMap) {
+        val resolvedItems = remember(occupancyState.occupancyMap) {
             resolveUnpositionedItems(items, occupancyState)
         }
 
@@ -120,7 +139,6 @@ fun DynamicGridLayout(
                 modifier = Modifier.fillMaxSize()
             ) {
                 resolvedItems.forEach { item ->
-                    Log.i("heec.choi","Resolved item : $item")
                     DynamicGridItemLayout(
                         gridSize = gridSize,
                         item = item,
@@ -142,6 +160,7 @@ fun DynamicGridLayout(
                                 spanX = changedItem.spanX,
                                 spanY = changedItem.spanY
                             )
+                            occupancyState.publish()
                         },
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -155,7 +174,7 @@ fun DynamicGridLayout(
 
 /**
  * 순수 Layout Composable - OccupancyState 접근 없이 measure/place만 수행
- * 
+ *
  * @param gridSize 그리드 크기
  * @param cellWidth 셀 너비
  * @param cellHeight 셀 높이
@@ -182,7 +201,7 @@ private fun DynamicGridLayout(
         // Measure: 각 아이템의 크기 계산
         val placeables = measurables.mapNotNull { measurable ->
             val gridItem = measurable.getGridItem() ?: return@mapNotNull null
-            
+
             // Calculate dimensions based on span
             val itemWidth = (cellWidthPx * gridItem.spanX).roundToInt()
             val itemHeight = (cellHeightPx * gridItem.spanY).roundToInt()
