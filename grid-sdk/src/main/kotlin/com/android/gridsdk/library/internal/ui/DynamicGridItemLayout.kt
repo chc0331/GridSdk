@@ -82,6 +82,11 @@ internal fun DynamicGridItemLayout(
     }
 }
 
+data class ResizeSession(
+    val visible: Boolean = false,
+    val draggingCorner: ResizeCorner? = null
+)
+
 @Composable
 private fun DynamicResizeItemLayout(
     cellWidth: Dp,
@@ -91,6 +96,8 @@ private fun DynamicResizeItemLayout(
     item: GridItem,
     onUpdateItem: (Dp, Dp, GridItem) -> Unit
 ) {
+    var session by remember { mutableStateOf(ResizeSession()) }
+
     // 1. declare strategy
     var topEndHandlerShow by remember { mutableStateOf(true) }
     var bottomEndHandlerShow by remember { mutableStateOf(true) }
@@ -158,6 +165,7 @@ private fun DynamicResizeItemLayout(
 @Composable
 private fun ResizeHandler(
     item: GridItem,
+    session: ResizeSession,
     type: ResizeCorner,
     strategy: ResizeStrategy,
     cellWidth: Dp, cellHeight: Dp,
