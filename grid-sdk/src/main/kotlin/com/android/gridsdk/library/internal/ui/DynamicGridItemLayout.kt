@@ -1,5 +1,6 @@
 package com.android.gridsdk.library.internal.ui
 
+import android.util.Log
 import androidx.compose.animation.core.animateSizeAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -31,8 +32,10 @@ internal fun DynamicGridItemLayout(
     cellWidth: Dp,
     cellHeight: Dp,
     isResizeMode: Boolean,
+    showHandlersTrigger: Boolean,
     onLongPressed: (String) -> Unit,
     onTap: (String) -> Unit,
+    onHandlersHidden: () -> Unit,
     onItemChanged: (GridItem) -> Unit,
     modifier: Modifier = Modifier,
     cellContent: @Composable (GridItem) -> Unit
@@ -71,6 +74,8 @@ internal fun DynamicGridItemLayout(
                 itemWidth = itemWidth,
                 itemHeight = itemHeight,
                 item = item,
+                showHandlersTrigger = showHandlersTrigger,
+                onHandlersHidden = onHandlersHidden,
                 onUpdateItem = { width, height, updateItem ->
                     itemWidth = width
                     itemHeight = height
@@ -82,6 +87,12 @@ internal fun DynamicGridItemLayout(
     }
 }
 
+private sealed class HandlerVisibilityState {
+    object AllVisible : HandlerVisibilityState()
+    data class Dragging(val corner: ResizeCorner) : HandlerVisibilityState()
+    object AllHidden : HandlerVisibilityState()
+}
+
 @Composable
 private fun DynamicResizeItemLayout(
     cellWidth: Dp,
@@ -89,13 +100,16 @@ private fun DynamicResizeItemLayout(
     itemWidth: Dp,
     itemHeight: Dp,
     item: GridItem,
+    showHandlersTrigger: Boolean,
+    onHandlersHidden: () -> Unit,
     onUpdateItem: (Dp, Dp, GridItem) -> Unit
 ) {
-    // 1. declare strategy
-    var topEndHandlerShow by remember { mutableStateOf(true) }
-    var bottomEndHandlerShow by remember { mutableStateOf(true) }
-    var topStartHandlerShow by remember { mutableStateOf(true) }
-    var bottomStartHandlerShow by remember { mutableStateOf(true) }
+    var handlerVisibilityState by remember(showHandlersTrigger) {
+        mutableStateOf(
+            if (showHandlersTrigger) HandlerVisibilityState.AllVisible
+            else HandlerVisibilityState.AllHidden
+        )
+    }
 
     val topEndStrategy = remember {
         TopEndStrategy(
@@ -116,7 +130,18 @@ private fun DynamicResizeItemLayout(
         )
     }
 
-    if (topEndHandlerShow) {
+    val showTopEnd = when (val s = handlerVisibilityState) {
+        is HandlerVisibilityState.AllVisible -> true
+        is HandlerVisibilityState.Dragging -> s.corner == ResizeCorner.TopEnd
+        is HandlerVisibilityState.AllHidden -> false
+    }
+    val showBottomEnd = when (val s = handlerVisibilityState) {
+        is HandlerVisibilityState.AllVisible -> true
+        is HandlerVisibilityState.Dragging -> s.corner == ResizeCorner.BottomEnd
+        is HandlerVisibilityState.AllHidden -> false
+    }
+
+    if (showTopEnd) {
         ResizeHandler(
             item = item,
             type = ResizeCorner.TopEnd,
@@ -124,18 +149,18 @@ private fun DynamicResizeItemLayout(
             cellWidth = cellWidth,
             cellHeight = cellHeight,
             onResizeStart = {
-                topEndHandlerShow = true
-                bottomEndHandlerShow = false
+                handlerVisibilityState = HandlerVisibilityState.Dragging(ResizeCorner.TopEnd)
             },
             onResizeEnd = {
-                topEndHandlerShow = false
-                bottomEndHandlerShow = false
+                handlerVisibilityState = HandlerVisibilityState.AllHidden
+                onHandlersHidden()
+                bottomEndStrategy.rawSize = topEndStrategy.rawSize
             },
             onUpdateItem = onUpdateItem
         )
     }
 
-    if (bottomEndHandlerShow) {
+    if (showBottomEnd) {
         ResizeHandler(
             item = item,
             type = ResizeCorner.BottomEnd,
@@ -143,12 +168,12 @@ private fun DynamicResizeItemLayout(
             cellWidth = cellWidth,
             cellHeight = cellHeight,
             onResizeStart = {
-                topEndHandlerShow = false
-                bottomEndHandlerShow = true
+                handlerVisibilityState = HandlerVisibilityState.Dragging(ResizeCorner.BottomEnd)
             },
             onResizeEnd = {
-                topEndHandlerShow = false
-                bottomEndHandlerShow = false
+                handlerVisibilityState = HandlerVisibilityState.AllHidden
+                onHandlersHidden()
+                topEndStrategy.rawSize = bottomEndStrategy.rawSize
             },
             onUpdateItem = onUpdateItem
         )
@@ -190,10 +215,10 @@ private fun ResizeHandler(
                 true
             },
             onResizeEnd = {
-                onResizeEnd()
                 strategy.onResizeEnd { spanX, spanY ->
 
                 }
+                onResizeEnd()
             }
         )
     }

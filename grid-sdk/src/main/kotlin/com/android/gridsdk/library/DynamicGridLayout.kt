@@ -130,6 +130,7 @@ fun DynamicGridLayout(
             LocalGridCellSize provides DpSize(cellWidth, cellHeight)
         ) {
             var currentResizeItemId by remember { mutableStateOf<String?>(null) }
+            var showHandlersTrigger by remember { mutableStateOf(false) }
 
             // Layout은 순수 배치만 수행 (OccupancyState 접근 없음)
             DynamicGridLayout(
@@ -145,12 +146,15 @@ fun DynamicGridLayout(
                         cellWidth = cellWidth,
                         cellHeight = cellHeight,
                         isResizeMode = currentResizeItemId == item.id,
+                        showHandlersTrigger = showHandlersTrigger,
                         onLongPressed = { id ->
                             currentResizeItemId = id
+                            showHandlersTrigger = true
                         },
                         onTap = { id ->
                             currentResizeItemId = null
                         },
+                        onHandlersHidden = { showHandlersTrigger = false },
                         onItemChanged = { changedItem ->
                             // 리사이즈 중 occupancy 실시간 갱신 (유지)
                             occupancyState.updateGridItem(
