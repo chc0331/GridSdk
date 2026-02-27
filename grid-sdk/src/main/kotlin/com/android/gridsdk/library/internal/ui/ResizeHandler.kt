@@ -1,13 +1,10 @@
 package com.android.gridsdk.library.internal.ui
 
-import android.util.Log
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -21,14 +18,70 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.android.gridsdk.library.internal.resize.ResizeStrategy
 import com.android.gridsdk.library.internal.util.ResizeCorner
+import com.android.gridsdk.library.model.GridItem
+
+
+@Composable
+internal fun ResizeHandler(
+    item: GridItem,
+    type: ResizeCorner,
+    strategy: ResizeStrategy,
+    cellWidth: Dp, cellHeight: Dp,
+    onResizeStart: () -> Unit,
+    onResize: (DpSize) -> Unit,
+    onResizeEnd: (DpSize) -> Unit,
+    onUpdateItem: (Dp, Dp, GridItem) -> Unit
+) {
+    val alignment = when (type) {
+        ResizeCorner.TopStart -> Alignment.TopStart
+        ResizeCorner.TopEnd -> Alignment.TopEnd
+        ResizeCorner.BottomStart -> Alignment.BottomStart
+        else -> Alignment.BottomEnd
+    }
+    Box(
+        modifier = Modifier
+            .size(strategy.rawSize)
+    ) {
+        ResizeHandlerCorner(
+            type = type,
+            size = DpSize(20.dp, 20.dp),
+            onResizeStart = { offset ->
+                onResizeStart()
+                strategy.onResizeStart(offset)
+            },
+            onResize = { deltaW, deltaH, dragAmount ->
+                strategy.onResize(
+                    item,
+                    deltaW,
+                    deltaH,
+                    dragAmount
+                ) { spanX, spanY, offsetX, offsetY ->
+                    val nextWidth = cellWidth * spanX
+                    val nextHeight = cellHeight * spanY
+                    onUpdateItem(nextWidth, nextHeight, item.copy(spanX = spanX, spanY = spanY))
+                }
+                onResize(strategy.rawSize)
+                true
+            },
+            onResizeEnd = {
+                strategy.onResizeEnd { spanX, spanY ->
+
+                }
+                onResizeEnd(strategy.rawSize)
+            },
+            modifier = Modifier.align(alignment)
+        )
+    }
+}
 
 // todo : 양 방향 Resize 기능 구현 필요
 /**
  * 1. 4방향 핸들러는 각각 별개의 컴포저블로 제공되어야 함.
  * */
 @Composable
-internal fun ResizeHandler(
+private fun ResizeHandlerCorner(
     type: ResizeCorner,
     size: DpSize,
     onResizeStart: (Offset) -> Unit,
@@ -37,13 +90,6 @@ internal fun ResizeHandler(
     modifier: Modifier = Modifier,
     outlineColor: Color = Color.LightGray
 ) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .background(Color.Transparent, RoundedCornerShape(18.dp))
-            .border(2.dp, Color.White, RoundedCornerShape(18.dp))
-    )
-
     Box(
         modifier = modifier
             .size(size)
